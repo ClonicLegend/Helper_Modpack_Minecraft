@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Modding Suite Master Hub</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg: #12121f;
+  --surface: #1a1a2e;
+  --panel: #0f3460;
+  --accent: #e94560;
+  --accent2: #f5a623;
+  --text: #eaeaea;
+  --muted: #7a86a0;
+  --border: #252a40;
+  --node-bg: #1c2438;
+  --node-border: #2e4070;
+  --input-bg: #111827;
+}
+
+body {
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  overflow-y: auto;
+}
+
+.hub-container {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 40px;
+  width: 100%;
+  max-width: 950px;
+  box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+}
+.hub-header { text-align: center; margin-bottom: 32px; border-bottom: 1px solid var(--border); padding-bottom: 24px; }
+.hub-header h1 { font-size: 32px; color: #fff; margin-bottom: 8px; }
+.hub-header p { font-size: 14px; color: var(--muted); }
+
+.folder-badge {
+  background: #1e352f; border: 1px solid #27ae60; color: #5ddb8e;
+  padding: 6px 14px; border-radius: 6px; font-size: 13px; font-weight: 600;
+  display: inline-flex; align-items: center; gap: 6px; margin-top: 14px;
+}
+
+.hub-layout { display: grid; grid-template-columns: 420px 1fr; gap: 30px; }
+.hub-left, .hub-right { display: flex; flex-direction: column; gap: 16px; }
+
+.hub-section-title { font-size: 12px; color: var(--accent); font-weight: 700; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px; display: block; }
+
+.app-card {
+  background: var(--node-bg);
+  border: 2px solid var(--node-border);
+  border-radius: 12px;
+  padding: 20px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  position: relative;
+}
+.app-card:hover:not(.disabled) {
+  border-color: var(--accent2);
+  background: #222d48;
+  transform: translateY(-2px);
+}
+.app-card.active-module {
+  border-color: var(--accent);
+  background: rgba(233, 69, 96, 0.08);
+}
+.app-card.disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  border-style: dashed;
+}
+.app-card-icon { font-size: 36px; flex-shrink: 0; }
+.app-card-info { flex: 1; }
+.app-card-info h3 { font-size: 16px; color: #fff; margin-bottom: 2px; }
+.app-card-info p { font-size: 12px; color: var(--muted); line-height: 1.4; }
+.badge-tag {
+  position: absolute; top: 12px; right: 12px; font-size: 9px; font-weight: 700;
+  padding: 2px 6px; border-radius: 20px; text-transform: uppercase; letter-spacing: 0.5px;
+}
+.badge-tag.online { background: rgba(39, 174, 96, 0.2); color: #27ae60; }
+.badge-tag.locked { background: rgba(122, 134, 160, 0.15); color: var(--muted); }
+
+.file-panel {
+  background: var(--input-bg);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 20px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 380px;
+}
+.file-panel-content { display: flex; flex-direction: column; flex: 1; }
+.file-panel-content.blurred { filter: blur(4px); pointer-events: none; opacity: 0.5; }
+
+.file-list-header {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: 14px; padding-bottom: 10px; border-bottom: 1px solid var(--border);
+}
+.file-list-header h2 { font-size: 15px; color: #fff; }
+
+.project-list-container {
+  flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 8px;
+}
+.project-item {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 12px 16px; background: var(--node-bg); border: 1px solid var(--border);
+  border-radius: 8px; cursor: pointer; transition: background 0.15s;
+}
+.project-item:hover { background: #222d48; border-color: var(--accent2); }
+.project-meta { display: flex; flex-direction: column; gap: 2px; }
+.project-name { font-size: 13px; font-weight: 600; color: #fff; }
+.project-date { font-size: 11px; color: var(--muted); }
+.proj-btn {
+  background: var(--panel); border: none; color: #fff; 
+  font-size: 12px; font-weight: 600; cursor: pointer; padding: 6px 12px; border-radius: 6px;
+  transition: background 0.1s;
+}
+.proj-btn:hover { background: var(--accent); }
+
+.no-projects { text-align: center; color: var(--muted); font-size: 13px; padding: 60px 20px; line-height: 1.6; margin: auto; }
+.add-btn {
+  width: 100%; padding: 10px; margin-top: 14px; background: rgba(245, 166, 35, 0.1);
+  border: 1px dashed var(--accent2); color: var(--accent2); border-radius: 8px;
+  cursor: pointer; font-size: 13px; font-weight: 600; transition: all 0.15s;
+}
+.add-btn:hover { background: rgba(245, 166, 35, 0.2); color: #fff; }
+</style>
+</head>
+<body>
+
+<div class="hub-container">
+  <div class="hub-header">
+    <h1>🎮 Modding Project Center</h1>
+    <p>Select your master root mod folder to manage configurations across all developer suites.</p>
+    <div id="master-folder-status">
+      <button class="proj-btn" style="background:var(--accent); font-size:13px; padding:8px 20px; margin-top:10px;" onclick="selectMasterRootFolder()">📁 Connect Master Mod Folder</button>
+    </div>
+  </div>
+  
+  <div class="hub-layout">
+    <!-- LEFT SIDE -->
+    <div class="hub-left">
+      <span class="hub-section-title">Available Suite Applications</span>
+      
+      <div class="app-card active-module" id="mod-bosses" onclick="switchActiveSuiteModule('bosses', 'boss_progression.html')">
+        <span class="badge-tag online">Ready</span>
+        <div class="app-card-icon">⚔️</div>
+        <div class="app-card-info">
+          <h3>Boss Progression Editor</h3>
+          <p>Chart boss combat stats, campaign logic pathways, and difficulty curves.</p>
+        </div>
+      </div>
+
+      <div class="app-card" id="mod-loot" onclick="switchActiveSuiteModule('loot', 'mod_tracker.html')">
+  <span class="badge-tag online">Ready</span>
+  <div class="app-card-icon">📦</div>
+  <div class="app-card-info">
+    <h3>Minecraft Mod Tracker</h3>
+    <p>Organize required mods, dependencies parameters, curation lists, and server installation paths.</p>
+  </div>
+</div>
+
+      <div class="app-card disabled" id="mod-quests" onclick="alert('Module locked.')">
+        <span class="badge-tag locked">Locked</span>
+        <div class="app-card-icon">📜</div>
+        <div class="app-card-info">
+          <h3>Questline Graph Compiler</h3>
+          <p>Design branching dialogue scripts, NPC triggers, and multi-objective storylines.</p>
+        </div>
+      </div>
+    </div>
+    
+    <!-- RIGHT SIDE -->
+    <div class="hub-right">
+      <span class="hub-section-title">Suite Workspace Explorer</span>
+      
+      <div class="file-panel">
+        <div class="file-panel-content blurred" id="panel-blur-layer">
+          <div class="file-list-header">
+            <h2 id="current-panel-title">Boss Progression Project Profiles</h2>
+            <button class="proj-btn" style="background:#1e2840; color:var(--muted); font-size:11px; padding:4px 8px;" onclick="scanActiveSubFolder()">🔄 Refresh</button>
+          </div>
+
+          <div class="project-list-container" id="workspace-file-injector">
+            <div class="no-projects">Please authorize and mount the Master Mod Folder above to scan files.</div>
+          </div>
+
+          <button class="add-btn" id="btn-create-file" style="display:none;" onclick="createNewFileInActiveSubfolder()">＋ Create New Project Workspace File</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+let rootDirHandle = null;
+let activeSubfolderHandle = null;
+let activeSuiteKey = "bosses";          
+let activeAppFilename = "boss_progression.html"; 
+
+// Initialize IndexedDB memory cache on bootup
+window.addEventListener('DOMContentLoaded', async () => {
+  await tryRestoreFolderToken();
+});
+
+/* ===================== INDEXEDDB TOKEN MEMORY CACHE ===================== */
+function getDB() {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open("WorkspaceSuiteDB", 1);
+    request.onupgradeneeded = e => e.target.result.createObjectStore("settings");
+    request.onsuccess = e => resolve(e.target.result);
+    request.onerror = e => reject(e.target.error);
+  });
+}
+
+async function tryRestoreFolderToken() {
+  try {
+    const db = await getDB();
+    const tx = db.transaction("settings", "readonly");
+    const store = tx.objectStore("settings");
+    const handle = await new Promise((res, rej) => {
+      const req = store.get("root_folder_handle");
+      req.onsuccess = () => res(req.result);
+      req.onerror = () => rej(req.error);
+    });
+
+    if (handle) {
+      // Check if browser still holds permissions from last run
+      const options = { mode: 'readwrite' };
+      if ((await handle.queryPermission(options)) === 'granted') {
+        rootDirHandle = handle;
+        document.getElementById('master-folder-status').innerHTML = `
+          <div class="folder-badge">✔ Restored Folder: ${rootDirHandle.name}</div>
+          <button class="proj-btn" style="background:#1c2438; font-size:11px; margin-left:10px;" onclick="selectMasterRootFolder()">🔄 Change</button>
+        `;
+        document.getElementById('panel-blur-layer').classList.remove('blurred');
+        await switchActiveSuiteModule(activeSuiteKey, activeAppFilename);
+      } else {
+        // Permission expired or requires interaction link click
+        document.getElementById('master-folder-status').innerHTML = `
+          <button class="proj-btn" style="background:var(--accent2); font-size:13px; padding:8px 20px; margin-top:10px;" onclick="verifyPermissionHook(this)">🔑 Re-Authorize ${handle.name}</button>
+        `;
+      }
+    }
+  } catch (e) { console.error("Database restore track skipped.", e); }
+}
+
+async function verifyPermissionHook(btn) {
+  try {
+    const db = await getDB();
+    const tx = db.transaction("settings", "readonly");
+    const handle = await new Promise(res => {
+      tx.objectStore("settings").get("root_folder_handle").onsuccess = e => res(e.target.result);
+    });
+    
+    if (handle) {
+      const status = await handle.requestPermission({ mode: 'readwrite' });
+      if (status === 'granted') {
+        rootDirHandle = handle;
+        document.getElementById('master-folder-status').innerHTML = `
+          <div class="folder-badge">✔ Restored Folder: ${rootDirHandle.name}</div>
+          <button class="proj-btn" style="background:#1c2438; font-size:11px; margin-left:10px;" onclick="selectMasterRootFolder()">🔄 Change</button>
+        `;
+        document.getElementById('panel-blur-layer').classList.remove('blurred');
+        await switchActiveSuiteModule(activeSuiteKey, activeAppFilename);
+      }
+    }
+  } catch(e) { alert("Authorization rejected."); }
+}
+
+async function selectMasterRootFolder() {
+  if (!('showDirectoryPicker' in window)) {
+    alert("Live Server interface required to enable background File System system API vectors.");
+    return;
+  }
+  try {
+    rootDirHandle = await window.showDirectoryPicker({ mode: 'readwrite' });
+    
+    // Write handle reference permanently into database cache!
+    const db = await getDB();
+    const tx = db.transaction("settings", "readwrite");
+    tx.objectStore("settings").put(rootDirHandle, "root_folder_handle");
+
+    document.getElementById('master-folder-status').innerHTML = `
+      <div class="folder-badge">✔ Root Connected: ${rootDirHandle.name}</div>
+      <button class="proj-btn" style="background:#1c2438; font-size:11px; margin-left:10px;" onclick="selectMasterRootFolder()">🔄 Change</button>
+    `;
+    document.getElementById('panel-blur-layer').classList.remove('blurred');
+    await switchActiveSuiteModule(activeSuiteKey, activeAppFilename);
+  } catch (err) {
+    console.error(err);
+  }
+}
+
+/* ===================== DIRECTORY ROUTER TREE PRESERVED ===================== */
+async function switchActiveSuiteModule(moduleKey, associatedFile) {
+  activeSuiteKey = moduleKey;
+  activeAppFilename = associatedFile;
+
+  document.querySelectorAll('.app-card').forEach(el => el.classList.remove('active-module'));
+  const targetCard = document.getElementById(`mod-${moduleKey}`);
+  if(targetCard) targetCard.classList.add('active-module');
+
+  const titleMap = {
+    "bosses": "Boss Progression Project Profiles (/bosses/)",
+    "loot": "Minecraft Mod Tracker Profiles (/loot/)",
+    "quests": "Storyline Data Arrays (/quests/)"
+  };
+  document.getElementById('current-panel-title').textContent = titleMap[moduleKey] || "Mod Profiles";
+
+  if (!rootDirHandle) return;
+
+  try {
+    activeSubfolderHandle = await rootDirHandle.getDirectoryHandle(moduleKey, { create: true });
+    document.getElementById('btn-create-file').style.display = 'block';
+    await scanActiveSubFolder();
+  } catch (err) { console.error(err); }
+}
+
+async function scanActiveSubFolder() {
+  const container = document.getElementById('workspace-file-injector');
+  if (!activeSubfolderHandle) return;
+
+  container.innerHTML = '';
+  let counter = 0;
+
+  for await (const entry of activeSubfolderHandle.values()) {
+    if (entry.kind === 'file' && entry.name.endsWith('.json')) {
+      counter++;
+      const file = await entry.getFile();
+      
+      const card = document.createElement('div');
+      card.className = 'project-item';
+      card.innerHTML = `
+        <div class="project-meta">
+          <span class="project-name">📄 ${escapeHtml(entry.name)}</span>
+          <span class="project-date">Size: ${(file.size / 1024).toFixed(2)} KB · Config JSON</span>
+        </div>
+        <button class="proj-btn">⚡ Open in Editor</button>
+      `;
+
+      card.querySelector('.proj-btn').addEventListener('click', async () => {
+  const textPayload = await file.text();
+  // Temporarily store the active project state in SessionStorage
+  sessionStorage.setItem('active_project_filename', entry.name);
+  sessionStorage.setItem('active_project_payload', textPayload);
+  
+  // Dynamically redirects to activeAppFilename (which becomes 'mod_tracker.html')
+  window.location.href = activeAppFilename;
+});
+
+      container.appendChild(card);
+    }
+  }
+
+  if (counter === 0) {
+    container.innerHTML = `<div class="no-projects">Connected to <b>/${activeSuiteKey}/</b> folder successfully!<br><span style="color:var(--muted); font-size:11px;">No active files found. Create one below to begin.</span></div>`;
+  }
+}
+
+async function createNewFileInActiveSubfolder() {
+  if (!activeSubfolderHandle) return;
+  let name = prompt(`Enter custom profile name to create inside /${activeSuiteKey}/:`);
+  if (!name || !name.trim()) return;
+  let filename = name.trim().endsWith('.json') ? name.trim() : name.trim() + '.json';
+  try {
+    const fileHandle = await activeSubfolderHandle.getFileHandle(filename, { create: true });
+    const templateBlueprint = { nodes: [], edges: [] };
+    const writable = await fileHandle.createWritable();
+    await writable.write(JSON.stringify(templateBlueprint, null, 2));
+    await writable.close();
+    await scanActiveSubFolder();
+  } catch (e) { alert("Write access execution fault."); }
+}
+
+function escapeHtml(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+</script>
+</body>
+</html>

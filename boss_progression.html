@@ -1,0 +1,695 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Boss Progression Editor</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg: #12121f;
+  --surface: #1a1a2e;
+  --panel: #0f3460;
+  --accent: #e94560;
+  --accent2: #f5a623;
+  --text: #eaeaea;
+  --muted: #7a86a0;
+  --border: #252a40;
+  --node-bg: #1c2438;
+  --node-border: #2e4070;
+  --connector: #4a6fa5;
+  --selected: #e94560;
+  --input-bg: #111827;
+}
+
+body {
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  user-select: none;
+}
+
+/* TOP BAR */
+#topbar {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  padding: 8px 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+  z-index: 100;
+}
+#topbar h1 { font-size: 14px; font-weight: 700; color: var(--accent); letter-spacing: 0.5px; margin-right: 4px; }
+.tb-btn {
+  background: #1e2840;
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 5px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 12px;
+  display: flex; align-items: center; gap: 5px;
+  transition: background 0.15s;
+  white-space: nowrap;
+}
+.tb-btn:hover { background: #1a3a6a; }
+.tb-btn.on { background: #1a3a2a; border-color: #27ae60; color: #5ddb8e; }
+.tb-btn.accent { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
+.tb-btn.accent:hover { background: #c73050; }
+.tb-sep { width: 1px; height: 22px; background: var(--border); margin: 0 2px; }
+.tb-spacer { flex: 1; }
+.tb-hint { font-size: 11px; color: var(--muted); }
+
+/* MAIN */
+#main { display: flex; flex: 1; overflow: hidden; }
+
+/* CANVAS VIEWPORT CONTAINER */
+#canvas-wrap {
+  flex: 1; position: relative; overflow: hidden; 
+  cursor: grab;
+  background-color: var(--bg);
+  background-image: 
+    linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+  background-size: 40px 40px;
+  background-position: 0px 0px;
+}
+#canvas-wrap:active { cursor: grabbing; }
+#canvas-wrap.connect-mode { cursor: crosshair; }
+
+/* WORLD CONTAINER */
+#canvas-world {
+  position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+  transform-origin: 0 0;
+}
+
+svg#arrows {
+  position: absolute; top: 0; left: 0; width: 20000px; height: 20000px;
+  overflow: visible; pointer-events: none; z-index: 1;
+}
+#nodes-layer {
+  position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 2;
+}
+
+/* NODES */
+.boss-node {
+  position: absolute; width: 172px; background: var(--node-bg); border: 2px solid var(--node-border); border-radius: 10px;
+  cursor: grab; z-index: 10; overflow: hidden;
+}
+.boss-node:active { cursor: grabbing; }
+.boss-node.selected { border-color: var(--selected); box-shadow: 0 0 0 3px rgba(233,69,96,0.2); z-index: 20; }
+.boss-node.connect-source { border-color: var(--accent2); box-shadow: 0 0 0 3px rgba(245,166,35,0.25); }
+
+.node-img { width: 100%; height: 72px; object-fit: cover; display: block; border-bottom: 1px solid rgba(255,255,255,0.06); }
+.node-img-placeholder { width: 100%; height: 72px; display: flex; align-items: center; justify-content: center; font-size: 28px; border-bottom: 1px solid rgba(255,255,255,0.06); }
+.node-header { padding: 7px 10px 5px; display: flex; align-items: center; gap: 6px; }
+.node-name { font-size: 12px; font-weight: 700; color: #fff; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.diff-pill { font-size: 9px; font-weight: 700; padding: 2px 6px; border-radius: 20px; letter-spacing: 0.5px; text-transform: uppercase; white-space: nowrap; }
+
+.node-body { padding: 4px 10px 8px; display: flex; flex-direction: column; gap: 3px; }
+.stat-row { display: flex; justify-content: space-between; font-size: 11px; color: var(--muted); }
+.stat-val { color: var(--text); font-weight: 500; }
+
+.node-port {
+  position: absolute; width: 13px; height: 13px; border-radius: 50%; background: var(--connector); border: 2px solid var(--bg);
+  cursor: crosshair; z-index: 30; transition: transform 0.1s, background 0.1s;
+}
+.node-port:hover { background: var(--accent2); }
+.port-out { right: -7px; top: 50%; transform: translateY(-50%); }
+.port-out:hover { transform: translateY(-50%) scale(1.35); }
+.port-in  { left: -7px;  top: 50%; transform: translateY(-50%); }
+.port-in:hover  { transform: translateY(-50%) scale(1.35); }
+#drag-line { pointer-events: none; position: absolute; top: 0; left: 0; z-index: 50; }
+
+/* SIDE PANEL */
+#side-panel { width: 290px; background: var(--surface); border-left: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden; flex-shrink: 0; }
+#panel-tabs { display: flex; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+.ptab { flex: 1; padding: 10px 6px; font-size: 11px; font-weight: 600; text-align: center; cursor: pointer; color: var(--muted); border-bottom: 2px solid transparent; letter-spacing: 0.4px; text-transform: uppercase; transition: color 0.15s; }
+.ptab.active { color: var(--accent); border-bottom-color: var(--accent); }
+.ptab:hover:not(.active) { color: var(--text); }
+#panel-body { flex: 1; overflow-y: auto; padding: 14px 14px; }
+#panel-body::-webkit-scrollbar { width: 3px; }
+#panel-body::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+.empty-state { text-align: center; padding: 36px 16px; color: var(--muted); font-size: 13px; line-height: 1.7; }
+.empty-state .big { font-size: 30px; margin-bottom: 10px; }
+.sec-title { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.6px; font-weight: 700; margin: 16px 0 8px; border-top: 1px solid var(--border); padding-top: 12px; }
+.sec-title:first-child { margin-top: 0; border-top: none; padding-top: 0; }
+.fg { margin-bottom: 11px; }
+.fl { display: block; font-size: 10px; color: var(--muted); margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600; }
+.fi { width: 100%; background: var(--input-bg); border: 1px solid var(--border); color: var(--text); padding: 6px 9px; border-radius: 6px; font-size: 13px; outline: none; transition: border-color 0.15s; }
+.fi:focus { border-color: var(--accent); }
+select.fi { cursor: pointer; }
+textarea.fi { resize: vertical; min-height: 60px; }
+
+.attr-row { display: flex; align-items: center; gap: 6px; margin-bottom: 7px; }
+.attr-row .fi { flex: 1; }
+.attr-row .fi-num { width: 80px; flex: none; }
+.attr-del { background: none; border: none; color: #e74c3c; cursor: pointer; font-size: 16px; line-height: 1; padding: 2px 4px; border-radius: 4px; }
+.attr-del:hover { background: rgba(231,76,60,0.15); }
+.add-btn { width: 100%; padding: 6px; margin-top: 4px; background: rgba(74,111,165,0.15); border: 1px dashed var(--border); color: var(--muted); border-radius: 6px; cursor: pointer; font-size: 12px; }
+.add-btn:hover { background: rgba(74,111,165,0.3); color: var(--text); }
+.img-thumb-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-top: 6px; }
+.img-thumb { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 6px; cursor: pointer; border: 2px solid transparent; }
+.img-thumb.active { border-color: var(--accent); }
+.img-thumb-none { width: 100%; aspect-ratio: 1; border: 2px dashed var(--border); border-radius: 6px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 20px; color: var(--muted); }
+.conn-list { display: flex; flex-direction: column; gap: 5px; }
+.conn-item { display: flex; justify-content: space-between; align-items: center; background: var(--input-bg); border: 1px solid var(--border); border-radius: 6px; padding: 5px 10px; font-size: 12px; color: var(--muted); }
+.conn-del { cursor: pointer; color: #e74c3c; font-weight: 700; background: none; border: none; padding: 0 2px; font-size: 14px; }
+.del-btn { width: 100%; margin-top: 16px; padding: 8px; background: rgba(231,76,60,0.1); border: 1px solid rgba(231,76,60,0.3); color: #e74c3c; border-radius: 6px; cursor: pointer; font-size: 12px; }
+
+#chart-canvas { width:100%; border-radius:6px; display:block; }
+.chart-legend { display:flex; flex-wrap:wrap; gap:6px; margin-top:8px; }
+.chart-legend-item { display:flex; align-items:center; gap:4px; font-size:11px; color:var(--muted); }
+.chart-legend-dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+.chart-metric-tabs { display:flex; gap:4px; margin-bottom:10px; flex-wrap:wrap; }
+.chart-metric-btn { padding:3px 10px; border-radius:20px; font-size:11px; cursor:pointer; border:1px solid var(--border); background:var(--input-bg); color:var(--muted); }
+.chart-metric-btn.active { background:var(--accent); border-color:var(--accent); color:#fff; }
+.diff-desc-block { margin-bottom:10px; border:1px solid var(--border); border-radius:8px; overflow:hidden; }
+.diff-desc-head { display:flex; align-items:center; gap:8px; padding:8px 12px; cursor:pointer; background:var(--input-bg); font-size:13px; font-weight:600; }
+.diff-desc-body { padding:10px 12px; background:var(--node-bg); }
+
+#ctx-menu { position: fixed; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 4px; z-index: 9999; min-width: 160px; box-shadow: 0 8px 24px rgba(0,0,0,0.5); display: none; }
+.ctx-item { display: flex; align-items: center; gap: 8px; padding: 7px 12px; border-radius: 5px; font-size: 13px; color: var(--text); cursor: pointer; }
+.ctx-item:hover { background: #1a3a6a; }
+.ctx-item.danger { color: #e74c3c; }
+.ctx-sep { height: 1px; background: var(--border); margin: 3px 0; }
+
+/* ADD BOSS MODAL */
+#add-boss-modal {
+  display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.65);
+  align-items: center; justify-content: center; z-index: 2000;
+}
+#add-boss-modal.open { display: flex; }
+.modal-box {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 14px; padding: 26px 24px; width: 380px; max-width: 95vw;
+  box-shadow: 0 20px 50px rgba(0,0,0,0.6);
+}
+.modal-box h3 { font-size: 16px; font-weight: 700; margin-bottom: 18px; color: #fff; }
+.modal-fi { width: 100%; background: var(--input-bg); border: 1px solid var(--border); color: var(--text); padding: 8px 11px; border-radius: 7px; font-size: 13px; outline: none; margin-bottom: 10px; transition: border-color 0.15s; }
+.modal-fi:focus { border-color: var(--accent); }
+.modal-label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; font-weight: 700; display: block; margin-bottom: 4px; }
+.modal-attr-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 12px; }
+.modal-btns { display: flex; gap: 8px; margin-top: 18px; }
+.modal-btns button { flex: 1; padding: 9px; border-radius: 7px; cursor: pointer; font-size: 13px; font-weight: 600; border: 1px solid var(--border); }
+.modal-btns .ok { background: var(--accent); border-color: var(--accent); color: #fff; }
+.modal-btns .ok:hover { background: #c73050; }
+.modal-btns .cancel { background: var(--input-bg); color: var(--muted); }
+.modal-btns .cancel:hover { background: #1a2540; color: var(--text); }
+</style>
+</head>
+<body>
+
+<div id="topbar">
+  <button class="tb-btn" onclick="goToHubMenu()" style="background: #2c1a30; border-color: #50255c; color: #d686eb; font-weight: bold;">🏠 Main Menu</button>
+  <button class="tb-btn" id="disk-save-btn" onclick="syncActiveFileToDisk()" style="background: #1e352f; border-color: #27ae60; color: #5ddb8e; display: none;">💾 Disk Sync</button>
+  <div class="tb-sep"></div>
+  <h1 id="workspace-title">Boss Progression Editor</h1>
+  <button class="tb-btn accent" onclick="addBoss()">＋ Add Boss</button>
+  <div class="tb-sep"></div>
+  <button class="tb-btn" id="connect-btn" onclick="toggleConnectMode()">🔗 Connect</button>
+  <button class="tb-btn" onclick="autoLayout()">⊞ Auto Layout</button>
+  <div class="tb-sep"></div>
+  <button class="tb-btn" onclick="exportJSON()">⬇ Export Standalone JSON</button>
+  <button class="tb-btn" onclick="importJSON()">⬆ Import JSON File</button>
+  <div class="tb-sep"></div>
+  <button class="tb-btn" onclick="showTab('global')">⚙ Global Settings</button>
+  <div class="tb-spacer"></div>
+  <span class="tb-hint" id="status-hint">Drag background to Pan · Click node to edit · Drag ● to connect</span>
+</div>
+
+<div id="main">
+  <div id="canvas-wrap" onclick="canvasClick(event)" onmousedown="canvasPanStart(event)">
+    <div id="canvas-world">
+      <svg id="arrows" style="position:absolute;top:0;left:0;width:20000px;height:20000px;overflow:visible;pointer-events:none;z-index:1;">
+        <defs>
+          <marker id="arrowhead" markerWidth="9" markerHeight="7" refX="8" refY="3.5" orient="auto"><polygon points="0 0, 9 3.5, 0 7" fill="#4a6fa5"/></marker>
+          <marker id="arrowhead-sel" markerWidth="9" markerHeight="7" refX="8" refY="3.5" orient="auto"><polygon points="0 0, 9 3.5, 0 7" fill="#e94560"/></marker>
+        </defs>
+        <g id="edges-g"></g>
+        <line id="drag-line" x1="0" y1="0" x2="0" y2="0" stroke="#f5a623" stroke-width="2" stroke-dasharray="5 3" display="none"/>
+      </svg>
+      <div id="nodes-layer"></div>
+    </div>
+  </div>
+
+  <div id="side-panel">
+    <div id="panel-tabs">
+      <div class="ptab active" id="tab-inspector" onclick="showTab('inspector')">Inspector</div>
+      <div class="ptab" id="tab-chart" onclick="showTab('chart')">📈 Curve</div>
+      <div class="ptab" id="tab-global" onclick="showTab('global')">⚙ Settings</div>
+    </div>
+    <div id="panel-body">
+      <div class="empty-state"><div class="big">🗡️</div>Select a boss node<br>to edit its stats</div>
+    </div>
+  </div>
+</div>
+
+<input type="file" id="file-input" accept=".json" style="display:none" onchange="handleImport(event)">
+<input type="file" id="img-folder-input" accept="image/*" multiple style="display:none" onchange="handleFolderImages(event)">
+
+<div id="ctx-menu">
+  <div class="ctx-item" id="ctx-duplicate" onclick="ctxDuplicate()">📋 Duplicate</div>
+  <div class="ctx-sep"></div>
+  <div class="ctx-item danger" id="ctx-delete" onclick="ctxDelete()">🗑 Delete</div>
+</div>
+
+<div id="add-boss-modal">
+  <div class="modal-box">
+    <h3>⚔️ New Boss</h3>
+    <label class="modal-label">Name</label>
+    <input class="modal-fi" id="mb-name" type="text" placeholder="e.g. Forest Slime" onkeydown="modalTab(event,'mb-diff')">
+
+    <label class="modal-label">Difficulty</label>
+    <select class="modal-fi" id="mb-diff" onkeydown="modalTabSelect(event)"></select>
+
+    <div class="sec-title" style="margin:14px 0 8px;border-top:1px solid var(--border);padding-top:12px;font-size:10px;color:var(--muted);letter-spacing:.6px;font-weight:700;text-transform:uppercase;">Stats</div>
+    <div class="modal-attr-grid" id="mb-attrs"></div>
+
+    <div class="modal-btns">
+      <button class="cancel" onclick="closeBossModal()">Cancel</button>
+      <button class="ok" onclick="confirmAddBoss()">＋ Add Boss</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ===================== PANNING VIEWPORT ENGINE ===================== */
+let panX = 0, panY = 0, isPanning = false, startPanMouse = { x: 0, y: 0 };
+
+function canvasPanStart(e) {
+  if (e.target.closest('.boss-node') || e.target.closest('.node-port') || connectMode) return;
+  isPanning = true; startPanMouse.x = e.clientX - panX; startPanMouse.y = e.clientY - panY;
+  window.addEventListener('mousemove', canvasPanMove); window.addEventListener('mouseup', canvasPanEnd);
+}
+function canvasPanMove(e) {
+  if (!isPanning) return; panX = e.clientX - startPanMouse.x; panY = e.clientY - startPanMouse.y; applyViewportTransform();
+}
+function canvasPanEnd() { isPanning = false; window.removeEventListener('mousemove', canvasPanMove); window.removeEventListener('mouseup', canvasPanEnd); }
+function applyViewportTransform() {
+  document.getElementById('canvas-world').style.transform = `translate(${panX}px, ${panY}px)`;
+  document.getElementById('canvas-wrap').style.backgroundPosition = `${panX}px ${panY}px`;
+}
+
+/* ===================== AUTOMATED DIRECT SAVE ENGINE ===================== */
+let currentFileName = "";
+
+function getDB() {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open("WorkspaceSuiteDB", 1);
+    request.onsuccess = e => resolve(e.target.result);
+    request.onerror = e => reject(e.target.error);
+  });
+}
+
+async function syncActiveFileToDisk() {
+  const packet = { nodes: Object.values(nodes), edges, difficulties, attrDefs, imageLibrary };
+  const json = JSON.stringify(packet, null, 2);
+
+  sessionStorage.setItem('active_project_payload', json);
+  sessionStorage.setItem('active_project_filename', currentFileName);
+
+  try {
+    const db = await getDB();
+    const tx = db.transaction("settings", "readonly");
+    const rootHandle = await new Promise(res => {
+      tx.objectStore("settings").get("root_folder_handle").onsuccess = e => res(e.target.result);
+    });
+
+    if (rootHandle) {
+      const bossesFolder = await rootHandle.getDirectoryHandle('bosses', { create: false });
+      const fileHandle = await bossesFolder.getFileHandle(currentFileName, { create: true });
+      
+      const writable = await fileHandle.createWritable();
+      await writable.write(json);
+      await writable.close();
+      
+      setStatus(`Saved directly to file disk: /bosses/${currentFileName}`);
+      alert(`💾 Changes written to your folder successfully!`);
+      return;
+    }
+  } catch(e) {
+    console.error(e);
+  }
+
+  localStorage.setItem('suite_backup_' + currentFileName, json);
+  alert(`Changes saved to temporary memory cache.`);
+}
+
+function goToHubMenu() { window.location.href = "index.html"; }
+
+/* ===================== EDITOR LOGIC CORE BACKBONE ===================== */
+let nodes = {}; let edges = []; let selectedNode = null; let selectedEdge = null;
+let connectMode = false; let connectSource = null; let nodeIdCounter = 1; let edgeIdCounter = 1;
+let draggingNode = null; let dragOffset = { x: 0, y: 0 }; let portDragActive = false; let portDragSource = null;
+let currentTab = 'inspector';
+
+let difficulties = [
+  { key: 'easy', label: 'Easy', emoji: '🐢', color: '#27ae60', description: 'Early game challenge tiers.' },
+  { key: 'medium', label: 'Medium', emoji: '🐺', color: '#f39c12', description: 'Mid game challenge tiers.' },
+  { key: 'hard', label: 'Hard', emoji: '🔥', color: '#e74c3c', description: 'Late game baseline scaling.' },
+  { key: 'legendary', label: 'Legendary', emoji: '💀', color: '#9b59b6', description: 'Pinnacle map hazards.' },
+];
+let attrDefs = [
+  { key: 'hp', label: 'HP', default: 200 },
+  { key: 'dmg', label: 'Damage', default: 20 },
+  { key: 'defense', label: 'Defense', default: 10 },
+  { key: 'speed', label: 'Speed', default: 5 },
+  { key: 'xp', label: 'XP', default: 100 },
+];
+let imageLibrary = {};
+
+function uid() { return 'n' + (nodeIdCounter++); }
+function eid() { return 'e' + (edgeIdCounter++); }
+function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function setStatus(m) { document.getElementById('status-hint').textContent = m; }
+function getDiff(key) { return difficulties.find(d => d.key === key) || difficulties[0]; }
+
+function unpackWorkspaceData(data) {
+  document.getElementById('nodes-layer').innerHTML = '';
+  nodes = {}; edges = data.edges || []; nodeIdCounter = 1; edgeIdCounter = 1;
+  if (data.difficulties) difficulties = data.difficulties;
+  if (data.attrDefs) attrDefs = data.attrDefs;
+  if (data.imageLibrary) imageLibrary = data.imageLibrary;
+  
+  (data.nodes || []).forEach(n => {
+    nodes[n.id] = n;
+    const num = parseInt(n.id.replace('n','')); if (num >= nodeIdCounter) nodeIdCounter = num + 1;
+  });
+  edges.forEach(e => {
+    const num = parseInt(e.id.replace('e','')); if (num >= edgeIdCounter) edgeIdCounter = num + 1;
+  });
+  Object.keys(nodes).forEach(id => renderNode(id));
+  updateEdges(); renderPanel();
+}
+
+function addBoss() {
+  const sel = document.getElementById('mb-diff');
+  sel.innerHTML = difficulties.map(d => `<option value="${esc(d.key)}">${d.emoji} ${esc(d.label)}</option>`).join('');
+
+  const grid = document.getElementById('mb-attrs');
+  const attrIds = attrDefs.map(a => 'mb-attr-' + a.key);
+  grid.innerHTML = attrDefs.map((a, i) => `
+    <div>
+      <label class="modal-label">${esc(a.label)}</label>
+      <input class="modal-fi" id="mb-attr-${esc(a.key)}" type="number" value="${a.default}"
+             onkeydown="modalTab(event,'${attrIds[i+1] || 'mb-name'}')">
+    </div>
+  `).join('');
+
+  document.getElementById('mb-name').value = '';
+  document.getElementById('add-boss-modal').classList.add('open');
+  setTimeout(() => document.getElementById('mb-name').focus(), 50);
+}
+
+function closeBossModal() {
+  document.getElementById('add-boss-modal').classList.remove('open');
+}
+
+function confirmAddBoss() {
+  const name = document.getElementById('mb-name').value.trim() || 'New Boss';
+  const difficulty = document.getElementById('mb-diff').value;
+  const attrs = {};
+  attrDefs.forEach(a => {
+    const el = document.getElementById('mb-attr-' + a.key);
+    attrs[a.key] = el ? (isNaN(+el.value) ? el.value : +el.value) : a.default;
+  });
+
+  const id = uid();
+  const cx = ((window.innerWidth - 290) / 2) - panX;
+  const cy = ((window.innerHeight - 42) / 2) - panY;
+  nodes[id] = { id, name, difficulty, attrs, image: null, loot: '', notes: '',
+                x: cx - 86 + (Math.random()-0.5)*80, y: cy - 80 + (Math.random()-0.5)*80 };
+  renderNode(id); selectNode(id); updateEdges();
+  closeBossModal();
+  setStatus(`Added: ${name}`);
+}
+
+function modalTab(e, nextId) {
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    const next = document.getElementById(nextId);
+    if (next) next.focus(); else confirmAddBoss();
+  }
+}
+function modalTabSelect(e) {
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    const first = attrDefs[0] ? document.getElementById('mb-attr-' + attrDefs[0].key) : null;
+    if (first) first.focus(); else confirmAddBoss();
+  }
+}
+
+document.getElementById('add-boss-modal').addEventListener('click', function(e) {
+  if (e.target === this) closeBossModal();
+});
+
+function renderNode(id) {
+  const n = nodes[id]; let el = document.getElementById('node-' + id);
+  if (!el) {
+    el = document.createElement('div'); el.id = 'node-' + id; el.className = 'boss-node'; document.getElementById('nodes-layer').appendChild(el);
+    el.addEventListener('mousedown', e => nodeMouseDown(e, id));
+    el.addEventListener('click', e => { e.stopPropagation(); nodeClick(id); });
+    el.addEventListener('contextmenu', e => { e.preventDefault(); e.stopPropagation(); showContextMenu(e, id); });
+  }
+  const diff = getDiff(n.difficulty); const pillStyle = `background:${hexAlpha(diff.color,0.18)};color:${diff.color}`;
+  let imgHTML = n.image && imageLibrary[n.image] ? `<img class="node-img" src="${imageLibrary[n.image]}" draggable="false">` : `<div class="node-img-placeholder" style="background:${hexAlpha(diff.color,0.1)}">${diff.emoji}</div>`;
+  const statsHTML = Object.keys(n.attrs).slice(0, 4).map(k => { const def = attrDefs.find(a => a.key === k); return `<div class="stat-row"><span>${def ? def.label : k}</span><span class="stat-val">${n.attrs[k]}</span></div>`; }).join('');
+  el.style.left = n.x + 'px'; el.style.top  = n.y + 'px';
+  el.innerHTML = `${imgHTML}<div class="node-header"><span class="node-name">${esc(n.name)}</span><span class="diff-pill" style="${pillStyle}">${diff.label}</span></div><div class="node-body">${statsHTML}</div><div class="node-port port-out" onmousedown="portMouseDown(event,'${id}')"></div><div class="node-port port-in" onmouseup="portMouseUp(event,'${id}')"></div>`;
+  el.classList.toggle('selected', selectedNode === id); el.classList.toggle('connect-source', connectSource === id);
+}
+
+function hexAlpha(hex, a) { return `rgba(${parseInt(hex.slice(1,3),16)},${parseInt(hex.slice(3,5),16)},${parseInt(hex.slice(5,7),16)},${a})`; }
+function nodeClick(id) { if (connectMode) { if (!connectSource) { connectSource = id; document.querySelectorAll('.boss-node').forEach(n => n.classList.remove('connect-source')); document.getElementById('node-' + id).classList.add('connect-source'); setStatus('Now click the target boss →'); } else if (connectSource !== id) { createEdge(connectSource, id); connectSource = null; document.querySelectorAll('.boss-node').forEach(n => n.classList.remove('connect-source')); setStatus('Connected!'); } return; } selectNode(id); }
+function selectNode(id) { selectedNode = id; selectedEdge = null; document.querySelectorAll('.boss-node').forEach(n => n.classList.remove('selected')); document.getElementById('node-' + id).classList.add('selected'); showTab('inspector'); updateEdges(); }
+function canvasClick(e) { if (e.target === document.getElementById('canvas-wrap') || e.target === document.getElementById('nodes-layer') || e.target.tagName === 'svg' || e.target.id === 'canvas-world') { selectedNode = null; selectedEdge = null; connectSource = null; document.querySelectorAll('.boss-node').forEach(n => { n.classList.remove('selected','connect-source'); }); if (currentTab === 'inspector') renderPanel(); updateEdges(); } }
+
+function nodeMouseDown(e, id) {
+  if (e.target.classList.contains('node-port')) return; e.stopPropagation(); draggingNode = id;
+  dragOffset.x = e.clientX - nodes[id].x; dragOffset.y = e.clientY - nodes[id].y;
+  const mm = ev => {
+    if (!draggingNode) return; nodes[draggingNode].x = ev.clientX - dragOffset.x; nodes[draggingNode].y = ev.clientY - dragOffset.y;
+    const el2 = document.getElementById('node-' + draggingNode); el2.style.left = nodes[draggingNode].x + 'px'; el2.style.top = nodes[draggingNode].y + 'px'; updateEdges();
+  };
+  const mu = () => { draggingNode = null; window.removeEventListener('mousemove', mm); window.removeEventListener('mouseup', mu); };
+  window.addEventListener('mousemove', mm); window.addEventListener('mouseup', mu);
+}
+
+function portMouseDown(e, nodeId) {
+  e.stopPropagation(); e.preventDefault(); portDragActive = true; portDragSource = nodeId;
+  const line = document.getElementById('drag-line'); const worldRect = document.getElementById('canvas-world').getBoundingClientRect(); const el = document.getElementById('node-' + nodeId).getBoundingClientRect();
+  const sx = el.right - worldRect.left, sy = el.top + el.height/2 - worldRect.top;
+  line.setAttribute('x1', sx); line.setAttribute('y1', sy); line.setAttribute('x2', sx); line.setAttribute('y2', sy); line.setAttribute('display', 'block');
+  const mm = ev => { line.setAttribute('x2', ev.clientX - worldRect.left); line.setAttribute('y2', ev.clientY - worldRect.top); };
+  const mu = ev => {
+    portDragActive = false; line.setAttribute('display', 'none'); window.removeEventListener('mousemove', mm); window.removeEventListener('mouseup', mu);
+    const hit = document.elementFromPoint(ev.clientX, ev.clientY);
+    if (hit && hit.classList.contains('port-in')) { const tid = hit.closest('.boss-node')?.id?.replace('node-',''); if (tid && tid !== portDragSource) createEdge(portDragSource, tid); }
+    portDragSource = null;
+  };
+  window.addEventListener('mousemove', mm); window.addEventListener('mouseup', mu);
+}
+function portMouseUp(e, nodeId) {}
+
+function createEdge(from, to) { if (from === to) return; if (edges.find(e => e.from === from && e.to === to)) return; edges.push({ id: eid(), from, to }); updateEdges(); if (selectedNode) renderPanel(); }
+function deleteEdge(id) { edges = edges.filter(e => e.id !== id); updateEdges(); if (selectedNode || selectedEdge) { selectedEdge = null; renderPanel(); } }
+
+function updateEdges() {
+  const g = document.getElementById('edges-g'); g.innerHTML = ''; const worldRect = document.getElementById('canvas-world').getBoundingClientRect();
+  const defs = document.querySelector('#arrows defs'); defs.querySelectorAll('.dyn-marker').forEach(m => m.remove());
+  edges.forEach(edge => {
+    const fe = document.getElementById('node-' + edge.from); const te = document.getElementById('node-' + edge.to); if (!fe || !te) return;
+    const fromNode = nodes[edge.from]; const diff = getDiff(fromNode?.difficulty); const isSel = selectedEdge === edge.id;
+    const diffIdx = difficulties.findIndex(d => d.key === fromNode?.difficulty); const strokeW = isSel ? 3 : (1.5 + diffIdx * 0.5); const strokeColor = isSel ? '#e94560' : diff.color; const markerId = 'arrow-' + diff.key + (isSel?'-sel':'');
+    if (!defs.querySelector('#' + markerId)) {
+      const marker = document.createElementNS('http://www.w3.org/2000/svg','marker'); marker.setAttribute('id', markerId); marker.setAttribute('class', 'dyn-marker'); marker.setAttribute('markerWidth','9'); marker.setAttribute('markerHeight','7'); marker.setAttribute('refX','8'); marker.setAttribute('refY','3.5'); marker.setAttribute('orient','auto');
+      const poly = document.createElementNS('http://www.w3.org/2000/svg','polygon'); poly.setAttribute('points','0 0, 9 3.5, 0 7'); poly.setAttribute('fill', strokeColor); marker.appendChild(poly); defs.appendChild(marker);
+    }
+    const fr = fe.getBoundingClientRect(), tr = te.getBoundingClientRect();
+    const x1 = fr.right - worldRect.left, y1 = fr.top + fr.height/2 - worldRect.top; const x2 = tr.left - worldRect.left, y2 = tr.top + tr.height/2 - worldRect.top;
+    const dx = Math.abs(x2-x1); const cx1 = x1 + Math.max(50, dx*0.5); const cx2 = x2 - Math.max(50, dx*0.5);
+    const p = document.createElementNS('http://www.w3.org/2000/svg','path'); p.setAttribute('d', `M${x1},${y1} C${cx1},${y1} ${cx2},${y2} ${x2},${y2}`); p.setAttribute('fill','none'); p.setAttribute('stroke', strokeColor); p.setAttribute('stroke-width', strokeW); p.setAttribute('opacity', isSel ? '1' : '0.75'); p.setAttribute('marker-end', `url(#${markerId})`); p.style.pointerEvents = 'stroke'; p.style.cursor = 'pointer';
+    p.addEventListener('click', ev => { ev.stopPropagation(); selectedEdge = edge.id; selectedNode = null; document.querySelectorAll('.boss-node').forEach(n => n.classList.remove('selected')); renderPanel(); updateEdges(); });
+    g.appendChild(p);
+  });
+}
+
+function showTab(tab) { currentTab = tab; document.getElementById('tab-inspector').classList.toggle('active', tab === 'inspector'); document.getElementById('tab-chart').classList.toggle('active', tab === 'chart'); document.getElementById('tab-global').classList.toggle('active', tab === 'global'); renderPanel(); }
+
+function renderPanel() {
+  const body = document.getElementById('panel-body'); if (currentTab === 'global') { renderGlobalPanel(body); return; } if (currentTab === 'chart')  { renderChartPanel(body);  return; }
+  if (selectedEdge) {
+    const edge = edges.find(e => e.id === selectedEdge); if (!edge) return;
+    body.innerHTML = `<div class="sec-title" style="margin-top:0;">Connection</div><div style="font-size:13px;color:var(--muted);margin-bottom:12px"><b style="color:var(--text)">${esc(nodes[edge.from]?.name)}</b><span style="margin:0 8px">→</span><b style="color:var(--text)">${esc(nodes[edge.to]?.name)}</b></div><button class="del-btn" onclick="deleteEdge('${edge.id}')">🗑 Delete Connection</button>`; return;
+  }
+  if (!selectedNode || !nodes[selectedNode]) { body.innerHTML = `<div class="empty-state"><div class="big">🗡️</div>Select a boss node to edit its stats</div>`; return; }
+  const n = nodes[selectedNode]; const incoming = edges.filter(e => e.to === selectedNode); const outgoing  = edges.filter(e => e.from === selectedNode);
+  const diffOpts = difficulties.map(d => `<option value="${esc(d.key)}" ${n.difficulty===d.key?'selected':''}>${d.emoji} ${esc(d.label)}</option>`).join('');
+  const attrRows = attrDefs.map(def => { const val = (n.attrs && n.attrs[def.key] !== undefined) ? n.attrs[def.key] : def.default; return `<div class="attr-row"><input class="fi" style="width:80px;flex:none" type="text" value="${esc(def.label)}" readonly><input class="fi fi-num" type="number" value="${val}" oninput="updateAttr('${def.key}',this.value)"></div>`; }).join('');
+  const imgKeys = Object.keys(imageLibrary);
+  let imgGrid = imgKeys.length ? `<div class="img-thumb-grid"><div class="img-thumb-none ${!n.image?'active':''}" onclick="setNodeImage(null)">✕</div>${imgKeys.map(k => `<img class="img-thumb ${n.image===k?'active':''}" src="${imageLibrary[k]}" title="${esc(k)}" onclick="setNodeImage('${esc(k)}')" draggable="false">`).join('')}</div>` : `<div style="font-size:11px;color:var(--muted)">No images loaded yet.</div>`;
+  const connHTML = [...incoming.map(e => `<div class="conn-item"><span>← ${esc(nodes[e.from]?.name)}</span><button class="conn-del" onclick="deleteEdge('${e.id}')">✕</button></div>`), ...outgoing.map(e  => `<div class="conn-item"><span>→ ${esc(nodes[e.to]?.name)}</span><button class="conn-del" onclick="deleteEdge('${e.id}')">✕</button></div>`)].join('') || `<div style="font-size:12px;color:var(--muted)">No connections.</div>`;
+  body.innerHTML = `<div class="fg"><label class="fl">Boss Name</label><input class="fi" type="text" value="${esc(n.name)}" oninput="updateField('name',this.value)"></div><div class="fg"><label class="fl">Difficulty</label><select class="fi" onchange="updateField('difficulty',this.value)">${diffOpts}</select></div><div class="sec-title">Stats</div>${attrRows}<div class="sec-title">Loot &amp; Notes</div><div class="fg"><label class="fl">Loot / Drops</label><input class="fi" type="text" value="${esc(n.loot)}" oninput="updateField('loot',this.value)"></div><div class="fg"><label class="fl">Notes</label><textarea class="fi" rows="3" oninput="updateField('notes',this.value)">${esc(n.notes)}</textarea></div><div class="sec-title">Boss Image</div>${imgGrid}<div class="sec-title">Connections</div><div class="conn-list">${connHTML}</div><button class="del-btn" onclick="deleteNode('${n.id}')">🗑 Delete Boss</button>`;
+}
+
+function renderGlobalPanel(body) {
+  const diffRows = difficulties.map((d, i) => `<div class="diff-desc-block"><div class="diff-desc-head" onclick="toggleDiffBlock(${i})"><input type="color" class="diff-color-swatch" value="${d.color}" onchange="updateDiff(${i},'color',this.value)" onclick="event.stopPropagation()"><input class="fi diff-emoji-in" type="text" value="${esc(d.emoji)}" oninput="updateDiff(${i},'emoji',this.value)" onclick="event.stopPropagation()"><input class="fi diff-name-in" type="text" value="${esc(d.label)}" oninput="updateDiff(${i},'label',this.value)" onclick="event.stopPropagation()"><button class="attr-del" onclick="event.stopPropagation();removeDiff(${i})">✕</button><span style="color:var(--muted);font-size:12px" id="diff-chevron-${i}">▸</span></div><div class="diff-desc-body" id="diff-block-${i}" style="display:${d._open?'block':'none'}"><textarea class="fi" rows="2" oninput="updateDiff(${i},'description',this.value)">${esc(d.description||'')}</textarea></div></div>`).join('');
+  const attrRows = attrDefs.map((a, i) => `<div class="attr-row"><input class="fi" type="text" value="${esc(a.label)}" oninput="updateAttrDef(${i},'label',this.value)"><input class="fi fi-num" type="number" value="${a.default}" oninput="updateAttrDef(${i},'default',+this.value)"><button class="attr-del" onclick="removeAttrDef(${i})">✕</button></div>`).join('');
+  const imgKeys = Object.keys(imageLibrary);
+  const imgPreview = imgKeys.length ? `<div class="img-thumb-grid">${imgKeys.map(k => `<div style="position:relative"><img class="img-thumb" style="border:none" src="${imageLibrary[k]}"><button onclick="removeImage('${esc(k)}')" style="position:absolute;top:2px;right:2px;background:rgba(0,0,0,0.7);border:none;color:#fff;border-radius:4px;font-size:11px;padding:1px 5px">✕</button></div>`).join('')}</div>` : ``;
+  body.innerHTML = `<div class="sec-title" style="margin-top:0;">Difficulties</div>${diffRows}<button class="add-btn" onclick="addDiff()">＋ Add difficulty</button><div class="sec-title">Stat Attributes</div>${attrRows}<button class="add-btn" onclick="addAttrDef()">＋ Add attribute</button><div class="sec-title">Boss Images</div><button class="tb-btn" style="width:100%;justify-content:center" onclick="document.getElementById('img-folder-input').click()">📁 Load images...</button>${imgPreview}`;
+}
+
+function toggleDiffBlock(i) { difficulties[i]._open = !difficulties[i]._open; const block = document.getElementById('diff-block-' + i); const chev  = document.getElementById('diff-chevron-' + i); if (block) block.style.display = difficulties[i]._open ? 'block' : 'none'; if (chev)  chev.textContent = difficulties[i]._open ? '▾' : '▸'; }
+function updateDiff(i, field, val) { difficulties[i][field] = val; if (field === 'label') difficulties[i].key = val.toLowerCase().replace(/\s+/g,'_') || difficulties[i].key; Object.values(nodes).forEach(n => renderNode(n.id)); updateEdges(); if (currentTab === 'global') renderGlobalPanel(document.getElementById('panel-body')); else renderPanel(); }
+function removeDiff(i) { if (difficulties.length <= 1) { alert('Need at least one difficulty.'); return; } const removed = difficulties.splice(i, 1)[0]; const fallback = difficulties[0].key; Object.values(nodes).forEach(n => { if (n.difficulty === removed.key) { n.difficulty = fallback; renderNode(n.id); } }); renderPanel(); }
+function addDiff() { difficulties.push({ key: 'new_diff', label: 'New', emoji: '⭐', color: '#3498db', description: '', _open: true }); renderGlobalPanel(document.getElementById('panel-body')); }
+
+/* ===================== ROBUST NORMALIZED SCHEMATICS LAYER ===================== */
+function updateAttrDef(i, field, val) {
+  const oldKey = attrDefs[i].key;
+  attrDefs[i][field] = val;
+  
+  if (field === 'label') {
+    // Generate normalized safe alphanumeric object key mapping
+    const newKey = val.toLowerCase().replace(/[^a-z0-9_]/g, '_').replace(/^_+|_+$/g, '') || 'attr_' + Date.now();
+    if (newKey !== oldKey) {
+      attrDefs[i].key = newKey;
+      // Safeguard mutation migration loop across active objects layout array context
+      Object.values(nodes).forEach(n => {
+        if (n.attrs && n.attrs[oldKey] !== undefined) {
+          n.attrs[newKey] = n.attrs[oldKey];
+          delete n.attrs[oldKey];
+        }
+      });
+    }
+  }
+  
+  // Re-render and plot dependencies
+  Object.values(nodes).forEach(n => renderNode(n.id));
+  if (currentTab === 'inspector' && selectedNode) renderPanel();
+}
+
+function removeAttrDef(i) {
+  const removed = attrDefs.splice(i, 1)[0];
+  Object.values(nodes).forEach(n => { 
+    if (n.attrs) delete n.attrs[removed.key]; 
+    renderNode(n.id); 
+  });
+  renderGlobalPanel(document.getElementById('panel-body'));
+  if (selectedNode) renderPanel();
+}
+
+function addAttrDef() {
+  const key = 'attr_' + Date.now();
+  attrDefs.push({ key, label: 'New Stat', default: 0 });
+  Object.values(nodes).forEach(n => { 
+    if (n.attrs) n.attrs[key] = 0; 
+  });
+  renderGlobalPanel(document.getElementById('panel-body'));
+}
+
+function updateAttr(key, val) {
+  if (!selectedNode) return;
+  if (!nodes[selectedNode].attrs) nodes[selectedNode].attrs = {};
+  nodes[selectedNode].attrs[key] = isNaN(+val) ? val : +val;
+  renderNode(selectedNode);
+  updateEdges();
+  if (currentTab === 'chart') renderChartPanel(document.getElementById('panel-body'));
+}
+
+function handleFolderImages(e) { const files = Array.from(e.target.files); let done = 0; files.forEach(file => { const reader = new FileReader(); reader.onload = ev => { imageLibrary[file.name] = ev.target.result; done++; if (done === files.length) renderGlobalPanel(document.getElementById('panel-body')); }; reader.readAsDataURL(file); }); e.target.value = ''; }
+function removeImage(name) { delete imageLibrary[name]; Object.values(nodes).forEach(n => { if (n.image === name) { n.image = null; renderNode(n.id); } }); renderGlobalPanel(document.getElementById('panel-body')); }
+function setNodeImage(name) { if (!selectedNode) return; nodes[selectedNode].image = name; renderNode(selectedNode); updateEdges(); renderPanel(); }
+function updateField(key, val) { if (!selectedNode) return; nodes[selectedNode][key] = val; renderNode(selectedNode); updateEdges(); }
+function deleteNode(id) { edges = edges.filter(e => e.from !== id && e.to !== id); document.getElementById('node-' + id)?.remove(); delete nodes[id]; selectedNode = null; renderPanel(); updateEdges(); }
+function toggleConnectMode() { connectMode = !connectMode; const btn = document.getElementById('connect-btn'); const wrap = document.getElementById('canvas-wrap'); if (connectMode) { btn.classList.add('on'); btn.textContent = '🔗 Connect ON'; wrap.classList.add('connect-mode'); } else { btn.classList.remove('on'); btn.textContent = '🔗 Connect'; wrap.classList.remove('connect-mode'); connectSource = null; document.querySelectorAll('.boss-node').forEach(n => n.classList.remove('connect-source')); } }
+
+let chartMetric = 'power';
+function renderChartPanel(body) {
+  const order = topoOrder(); if (order.length < 2) { body.innerHTML = `<div class="empty-state"><div class="big">📈</div>Add at least 2 connected bosses<br>to see the difficulty curve</div>`; return; }
+  const metricBtns = [{ key:'power', label:'Power (HP×DMG)' }, ...attrDefs.map(a => ({ key: a.key, label: a.label }))].map(m => `<button class="chart-metric-btn ${chartMetric===m.key?'active':''}" onclick="chartMetric='${m.key}';renderChartPanel(document.getElementById('panel-body'))">${esc(m.label)}</button>`).join('');
+  body.innerHTML = `<div class="chart-metric-tabs">${metricBtns}</div><canvas id="chart-canvas" height="180"></canvas><div class="chart-legend" id="chart-legend"></div><div class="sec-title">Difficulty Guide</div>${difficulties.map(d => `<div class="diff-desc-block" style="margin-bottom:8px"><div style="display:flex;align-items:center;gap:8px;padding:7px 12px;background:${hexAlpha(d.color,0.12)};border-bottom:1px solid ${hexAlpha(d.color,0.2)}"><span style="font-size:15px">${d.emoji}</span><span style="font-size:12px;font-weight:700;color:${d.color}">${esc(d.label)}</span></div><div style="padding:8px 12px;background:var(--node-bg);font-size:11px;color:var(--muted);line-height:1.6">${esc(d.description || 'No description set. Edit in ⚙ Settings.')}</div></div>`).join('')}`;
+  drawChart(order);
+}
+function topoOrder() { const ids = Object.keys(nodes); const inDeg = {}, adj = {}; ids.forEach(id => { inDeg[id] = 0; adj[id] = []; }); edges.forEach(e => { if (nodes[e.from] && nodes[e.to]) { adj[e.from].push(e.to); inDeg[e.to]++; } }); const queue = ids.filter(id => inDeg[id] === 0); const result = [], visited = new Set(); while (queue.length) { const id = queue.shift(); if (visited.has(id)) continue; visited.add(id); result.push(id); adj[id].forEach(next => { inDeg[next]--; if (inDeg[next] === 0) queue.push(next); }); } return result; }
+function drawChart(order) {
+  const canvas = document.getElementById('chart-canvas'); if (!canvas) return; const W = canvas.offsetWidth || 260; canvas.width = W; canvas.height = 180; const ctx = canvas.getContext('2d'); const pad = { top:16, right:16, bottom:28, left:40 }; const cW = W - pad.left - pad.right, cH = canvas.height - pad.top - pad.bottom;
+  const vals = order.map(id => { const n = nodes[id]; return { id, val: chartMetric === 'power' ? Number(n.attrs?.hp||0)*Number(n.attrs?.dmg||0) : Number(n.attrs?.[chartMetric]||0), diff: n.difficulty, name: n.name }; });
+  const maxVal = Math.max(...vals.map(v => v.val), 1);
+  function px(i) { return pad.left + (i / Math.max(vals.length - 1, 1)) * cW; }
+  function py(v) { return pad.top + cH - (v / maxVal) * cH; }
+  ctx.lineWidth = 1;
+  for (let g = 0; g <= 4; g++) {
+    const y = pad.top + (g / 4) * cH; ctx.strokeStyle = 'rgba(255,255,255,0.05)'; ctx.beginPath(); ctx.moveTo(pad.left, y); ctx.lineTo(pad.left + cW, y); ctx.stroke();
+    const label = Math.round(maxVal - (g / 4) * maxVal); ctx.fillStyle = 'rgba(255,255,255,0.3)'; ctx.font = '9px Segoe UI,sans-serif'; ctx.textAlign = 'right'; ctx.fillText(label > 999 ? (label/1000).toFixed(1)+'k' : label, pad.left - 4, y + 3);
+  }
+  ctx.beginPath(); vals.forEach((v, i) => i === 0 ? ctx.moveTo(px(i), py(v.val)) : ctx.lineTo(px(i), py(v.val))); ctx.lineTo(px(vals.length - 1), pad.top + cH); ctx.lineTo(px(0), pad.top + cH); ctx.closePath();
+  const grad = ctx.createLinearGradient(0, pad.top, 0, pad.top + cH); grad.addColorStop(0, 'rgba(233,69,96,0.35)'); grad.addColorStop(1, 'rgba(233,69,96,0.02)'); ctx.fillStyle = grad; ctx.fill();
+  ctx.beginPath(); vals.forEach((v, i) => i === 0 ? ctx.moveTo(px(i), py(v.val)) : ctx.lineTo(px(i), py(v.val))); ctx.strokeStyle = '#e94560'; ctx.lineWidth = 2; ctx.lineJoin = 'round'; ctx.stroke();
+  vals.forEach((v, i) => { const diff = getDiff(v.diff); ctx.beginPath(); ctx.arc(px(i), py(v.val), 4, 0, Math.PI * 2); ctx.fillStyle = diff.color; ctx.fill(); ctx.strokeStyle = '#12121f'; ctx.lineWidth = 2; ctx.stroke(); });
+  ctx.font = '9px Segoe UI,sans-serif'; ctx.textAlign = 'center'; ctx.fillStyle = 'rgba(255,255,255,0.4)'; vals.forEach((v, i) => { const label = v.name.length > 8 ? v.name.slice(0, 7) + '…' : v.name; ctx.fillText(label, px(i), canvas.height - 4); });
+  const legend = document.getElementById('chart-legend'); if (legend) { const seen = new Set(); legend.innerHTML = difficulties.filter(d => { if (seen.has(d.key) || !vals.find(v => v.diff === d.key)) return false; seen.add(d.key); return true; }).map(d => `<div class="chart-legend-item"><div class="chart-legend-dot" style="background:${d.color}"></div>${esc(d.label)}</div>`).join(''); }
+}
+
+function autoLayout() {
+  const ids = Object.keys(nodes); if (!ids.length) return;
+  const inDeg = {}, adj = {}; ids.forEach(id => { inDeg[id] = 0; adj[id] = []; }); edges.forEach(e => { adj[e.from].push(e.to); inDeg[e.to]++; });
+  const queue = ids.filter(id => inDeg[id] === 0); const layers = [], visited = new Set();
+  while (queue.length) { const layer = [...queue]; layers.push(layer); layer.forEach(id => visited.add(id)); queue.length = 0; layer.forEach(id => adj[id].forEach(next => { if (!visited.has(next)) { inDeg[next]--; if (inDeg[next] === 0) queue.push(next); } })); }
+  const colW = 200, rowH = 160; layers.forEach((layer, col) => { layer.forEach((id, row) => { nodes[id].x = 60 + col * colW; nodes[id].y = 60 + row * rowH; renderNode(id); }); }); updateEdges();
+}
+
+function exportJSON() {
+  let name = prompt("Filename for standalone storage download package:", currentFileName || "boss_progression"); if (!name) return;
+  const data = { nodes: Object.values(nodes), edges, difficulties, attrDefs, imageLibrary };
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name.endsWith('.json') ? name : name + '.json'; a.click();
+}
+function importJSON() { document.getElementById('file-input').click(); }
+function handleImport(e) {
+  const file = e.target.files[0]; if (!file) return; const r = new FileReader();
+  r.onload = ev => { try { unpackWorkspaceData(JSON.parse(ev.target.result)); setStatus(`Imported external template: ${file.name}`); } catch { alert('Invalid file parameters.'); } }; r.readAsText(file); e.target.value = '';
+}
+
+let ctxTargetNode = null;
+function showContextMenu(e, id) { ctxTargetNode = id; selectNode(id); const menu = document.getElementById('ctx-menu'); menu.style.display = 'block'; menu.style.left = Math.min(e.clientX, window.innerWidth - 170) + 'px'; menu.style.top = Math.min(e.clientY, window.innerHeight - 90) + 'px'; }
+function hideContextMenu() { document.getElementById('ctx-menu').style.display = 'none'; ctxTargetNode = null; }
+function ctxDuplicate() { if (!ctxTargetNode) return; const src = nodes[ctxTargetNode]; const newId = uid(); nodes[newId] = { ...JSON.parse(JSON.stringify(src)), id: newId, name: src.name + ' (copy)', x: src.x + 190, y: src.y + 30 }; renderNode(newId); selectNode(newId); updateEdges(); hideContextMenu(); }
+function ctxDelete() { if (ctxTargetNode) deleteNode(ctxTargetNode); hideContextMenu(); }
+document.addEventListener('click', () => hideContextMenu());
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') { hideContextMenu(); closeBossModal(); }
+});
+
+function seedData() {
+  const seed = [
+    { name:'Forest Slime', difficulty:'easy', loot:'Slime Ball', notes:'Tutorial boss', x:60, y:100, attrs:{ hp:80, dmg:8, defense:2, speed:3, xp:50 } },
+    { name:'Goblin Chief', difficulty:'easy', loot:'Iron Sword', notes:'Spawns at night', x:60, y:300, attrs:{ hp:180, dmg:15, defense:8, speed:5, xp:150 } },
+    { name:'Stone Golem', difficulty:'medium', loot:'Stone Heart', notes:'Slow, hits hard', x:290, y:200, attrs:{ hp:500, dmg:30, defense:25, speed:2, xp:400 } }
+  ];
+  seed.forEach(s => { const id = uid(); nodes[id] = { id, image: null, ...s }; renderNode(id); });
+  const ids = Object.keys(nodes); edges.push({ id: eid(), from: ids[0], to: ids[2] }, { id: eid(), from: ids[1], to: ids[2] }); updateEdges();
+}
+
+window.addEventListener('DOMContentLoaded', () => {
+  const incomingFile = sessionStorage.getItem('active_project_filename');
+  const incomingData = sessionStorage.getItem('active_project_payload');
+  if (incomingFile && incomingData) {
+    try {
+      currentFileName = incomingFile; document.getElementById('workspace-title').textContent = '⚔️ ' + currentFileName;
+      const saveBtn = document.getElementById('disk-save-btn'); saveBtn.style.display = 'inline-flex'; saveBtn.textContent = `💾 Save to ${currentFileName}`;
+      unpackWorkspaceData(JSON.parse(incomingData)); setStatus(`Opened: ${currentFileName}`);
+    } catch(e) { console.error(e); seedData(); }
+  } else { seedData(); }
+});
+</script>
+</body>
+</html>
