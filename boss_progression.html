@@ -185,12 +185,17 @@ textarea.fi { resize: vertical; min-height: 60px; }
   display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.65);
   align-items: center; justify-content: center; z-index: 2000;
 }
+
+
 #add-boss-modal.open { display: flex; }
 .modal-box {
   background: var(--surface); border: 1px solid var(--border);
   border-radius: 14px; padding: 26px 24px; width: 380px; max-width: 95vw;
   box-shadow: 0 20px 50px rgba(0,0,0,0.6);
 }
+
+
+
 .modal-box h3 { font-size: 16px; font-weight: 700; margin-bottom: 18px; color: #fff; }
 .modal-fi { width: 100%; background: var(--input-bg); border: 1px solid var(--border); color: var(--text); padding: 8px 11px; border-radius: 7px; font-size: 13px; outline: none; margin-bottom: 10px; transition: border-color 0.15s; }
 .modal-fi:focus { border-color: var(--accent); }
@@ -212,6 +217,7 @@ textarea.fi { resize: vertical; min-height: 60px; }
   <div class="tb-sep"></div>
   <h1 id="workspace-title">Boss Progression Editor</h1>
   <button class="tb-btn accent" onclick="addBoss()">＋ Add Boss</button>
+  <button class="tb-btn" onclick="importBossesFromMod()" style="background: #1b263b; border-color: #f5a623; color: #f5a623; font-weight: 600;">🤖 Auto-Import Mod Mobs</button>
   <div class="tb-sep"></div>
   <button class="tb-btn" id="connect-btn" onclick="toggleConnectMode()">🔗 Connect</button>
   <button class="tb-btn" onclick="autoLayout()">⊞ Auto Layout</button>
@@ -279,6 +285,41 @@ textarea.fi { resize: vertical; min-height: 60px; }
   </div>
 </div>
 
+<div id="import-mod-modal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); align-items: center; justify-content: center; z-index: 2100;">
+  <div style="width: 480px; max-width: 95vw; background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 24px; box-shadow: 0 20px 50px rgba(0,0,0,0.6); display: flex; flex-direction: column; max-height: 85vh;">
+    <h3 style="font-size: 16px; font-weight: 700; margin-bottom: 14px; color: #fff; display: flex; align-items: center; gap: 8px;">🤖 Auto-Import Mod Mobs</h3>
+    
+    <div id="import-step-file" style="width:100%;">
+      <label style="font-size: 11px; color: var(--muted); text-transform: uppercase; font-weight: 700; display: block; margin-bottom: 6px;">Select Dataset Profile (/loot/)</label>
+      <select id="import-file-select" style="width: 100%; background: var(--input-bg); border: 1px solid var(--border); color: var(--text); padding: 8px 11px; border-radius: 7px; font-size: 13px; outline: none; margin-bottom: 14px; cursor: pointer;" onchange="onImportFileSelected()"></select>
+    </div>
+
+    <div id="import-step-mod" style="display:none; width:100%;">
+      <label style="font-size: 11px; color: var(--muted); text-transform: uppercase; font-weight: 700; display: block; margin-bottom: 6px;">Select Tracked Mod</label>
+      <select id="import-mod-select" style="width: 100%; background: var(--input-bg); border: 1px solid var(--border); color: var(--text); padding: 8px 11px; border-radius: 7px; font-size: 13px; outline: none; margin-bottom: 14px; cursor: pointer;" onchange="onImportModSelected()"></select>
+    </div>
+
+    <div id="import-step-mobs" style="display:none; flex: 1; overflow: hidden; flex-direction: column; width:100%;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+        <label style="font-size: 11px; color: var(--muted); text-transform: uppercase; font-weight: 700; margin-bottom: 0;">Select Mobs to Import</label>
+        <button onclick="toggleSelectAllImportMobs()" style="background: none; border: none; color: var(--accent2); font-size: 12px; cursor: pointer; font-weight: 600;">Toggle All</button>
+      </div>
+      <div id="import-mobs-list" style="flex: 1; overflow-y: auto; background: var(--input-bg); border: 1px solid var(--border); border-radius: 7px; padding: 8px; max-height: 240px; display: flex; flex-direction: column; gap: 6px;"></div>
+    </div>
+
+    <div style="display: flex; gap: 8px; margin-top: 18px; width:100%;">
+      <button style="flex: 1; padding: 9px; border-radius: 7px; cursor: pointer; font-size: 13px; font-weight: 600; border: 1px solid var(--border); background: var(--input-bg); color: var(--muted);" onclick="closeImportModal()">Cancel</button>
+      <button id="import-submit-btn" style="flex: 1; padding: 9px; border-radius: 7px; cursor: pointer; font-size: 13px; font-weight: 600; border: 1px solid var(--accent); background: var(--accent); color: #fff; display: none;" onclick="executeImportSelection()">Confirm Import</button>
+    </div>
+  </div>
+</div>
+    <div class="modal-btns" style="display: flex; gap: 8px; margin-top: 18px; width:100%;">
+      <button class="cancel" style="flex: 1; padding: 9px; border-radius: 7px; cursor: pointer; font-size: 13px; font-weight: 600; border: 1px solid var(--border); background: var(--input-bg); color: var(--muted);" onclick="closeImportModal()">Cancel</button>
+      <button class="ok" id="import-submit-btn" style="flex: 1; padding: 9px; border-radius: 7px; cursor: pointer; font-size: 13px; font-weight: 600; border: 1px solid var(--accent); background: var(--accent); color: #fff; display: none;" onclick="executeImportSelection()">Confirm Import</button>
+    </div>
+  </div>
+</div>
+
 <script>
 /* ===================== PANNING VIEWPORT ENGINE ===================== */
 let panX = 0, panY = 0, isPanning = false, startPanMouse = { x: 0, y: 0 };
@@ -302,9 +343,31 @@ let currentFileName = "";
 
 function getDB() {
   return new Promise((resolve, reject) => {
-    const request = indexedDB.open("WorkspaceSuiteDB", 1);
-    request.onsuccess = e => resolve(e.target.result);
-    request.onerror = e => reject(e.target.error);
+    const request = indexedDB.open("WorkspaceSuiteDB");
+    request.onupgradeneeded = (e) => {
+      const db = e.target.result;
+      if (!db.objectStoreNames.contains('settings')) {
+        db.createObjectStore('settings');
+      }
+    };
+    request.onsuccess = (e) => {
+      const db = e.target.result;
+      if (db.objectStoreNames.contains('settings')) {
+        resolve(db);
+        return;
+      }
+      // DB exists from an older version that never created the store — force an upgrade.
+      const upgradeVersion = db.version + 1;
+      db.close();
+      const upgradeRequest = indexedDB.open("WorkspaceSuiteDB", upgradeVersion);
+      upgradeRequest.onupgradeneeded = (ev) => {
+        const udb = ev.target.result;
+        if (!udb.objectStoreNames.contains('settings')) udb.createObjectStore('settings');
+      };
+      upgradeRequest.onsuccess = (ev) => resolve(ev.target.result);
+      upgradeRequest.onerror = (ev) => reject(ev.target.error);
+    };
+    request.onerror = (e) => reject(e.target.error);
   });
 }
 
@@ -680,6 +743,17 @@ function seedData() {
 }
 
 window.addEventListener('DOMContentLoaded', () => {
+  // Check for global schema variables published by the core Hub panel view
+  const rawGlobal = sessionStorage.getItem('shared_global_attributes');
+  if (rawGlobal) {
+    try {
+      const parsedGlobal = JSON.parse(rawGlobal);
+      if (Array.isArray(parsedGlobal) && parsedGlobal.length > 0) {
+        attrDefs = parsedGlobal;
+      }
+    } catch(e) { console.error(e); }
+  }
+
   const incomingFile = sessionStorage.getItem('active_project_filename');
   const incomingData = sessionStorage.getItem('active_project_payload');
   if (incomingFile && incomingData) {
@@ -690,6 +764,248 @@ window.addEventListener('DOMContentLoaded', () => {
     } catch(e) { console.error(e); seedData(); }
   } else { seedData(); }
 });
+
+/* ===================== WIZARD MOD DATA IMPORT ENGINE ===================== */
+let currentLootFolderHandle = null;
+let activeImportData = null;
+let selectedImportMod = null;
+
+async function importBossesFromMod() {
+  document.getElementById('import-mod-modal').style.display = 'flex';
+  document.getElementById('import-step-mod').style.display = 'none';
+  document.getElementById('import-step-mobs').style.display = 'none';
+  document.getElementById('import-submit-btn').style.display = 'none';
+  
+  const fileSelect = document.getElementById('import-file-select');
+  fileSelect.innerHTML = '<option value="">-- Loading profiles... --</option>';
+  
+  let rootHandle = null;
+  try {
+    const db = await getDB();
+    const tx = db.transaction("settings", "readonly");
+    rootHandle = await new Promise((res, rej) => {
+      const req = tx.objectStore("settings").get("root_folder_handle");
+      req.onsuccess = e => res(e.target.result);
+      req.onerror = e => rej(e.target.error);
+    });
+  } catch (dbErr) {
+    console.error("Failed to read workspace folder handle:", dbErr);
+    fileSelect.innerHTML = '<option value="">Error reading workspace settings (see console)</option>';
+    return;
+  }
+  
+  try {
+    if (!rootHandle) {
+      alert("No workspace folder connected. Go to the main dashboard menu first.");
+      // Removed closeImportModal() so the window stays open
+      fileSelect.innerHTML = '<option value="">No workspace folder connected</option>';
+      return;
+    }
+    
+    // --- FIX PATHING & PERMISSION FOR SUBFOLDERS ---
+    // Since this file is inside /bosses/, the browser requires re-verifying permissions for the workspace handle
+    if (typeof rootHandle.requestPermission === 'function') {
+      const opts = { mode: 'read' };
+      if ((await rootHandle.queryPermission(opts)) !== 'granted') {
+        await rootHandle.requestPermission(opts);
+      }
+    }
+
+    const fileNames = [];
+    try {
+      currentLootFolderHandle = await rootHandle.getDirectoryHandle('loot', { create: false });
+      for await (const entry of currentLootFolderHandle.values()) {
+        if (entry.kind === 'file' && entry.name.endsWith('.json')) {
+          fileNames.push(entry.name);
+        }
+      }
+    } catch (pathErr) {
+      console.error("Directory path routing failed:", pathErr);
+      fileSelect.innerHTML = '<option value="">Could not access /loot/ folder from this directory</option>';
+      return; // Safe exit without closing the window layout
+    }
+    // -----------------------------------------------
+    
+    if (fileNames.length === 0) {
+      fileSelect.innerHTML = '<option value="">No profile files found inside /loot/</option>';
+      return;
+    }
+    
+    fileSelect.innerHTML = '<option value="">-- Select a Profile --</option>' + 
+      fileNames.map(f => `<option value="${esc(f)}">${esc(f)}</option>`).join('');
+    
+  } catch (err) {
+    console.error("Failed to run import system:", err);
+    fileSelect.innerHTML = '<option value="">Unexpected error (see console)</option>';
+  }
+}
+function closeImportModal() {
+  document.getElementById('import-mod-modal').style.display = 'none';
+}
+
+async function onImportFileSelected() {
+  const filename = document.getElementById('import-file-select').value;
+  if (!filename) {
+    document.getElementById('import-step-mod').style.display = 'none';
+    document.getElementById('import-step-mobs').style.display = 'none';
+    document.getElementById('import-submit-btn').style.display = 'none';
+    return;
+  }
+
+  try {
+    const fileHandle = await currentLootFolderHandle.getFileHandle(filename);
+    const file = await fileHandle.getFile();
+    const text = await file.text();
+    activeImportData = JSON.parse(text);
+
+    const modSelect = document.getElementById('import-mod-select');
+    if (!activeImportData || !activeImportData.mods || !Array.isArray(activeImportData.mods) || activeImportData.mods.length === 0) {
+      modSelect.innerHTML = '<option value="">No mods found in file</option>';
+      document.getElementById('import-step-mod').style.display = 'block';
+      return;
+    }
+
+    modSelect.innerHTML = '<option value="">-- Select a Mod --</option>' + 
+      activeImportData.mods.map((m, i) => `<option value="${i}">${esc(m.name)}</option>`).join('');
+    
+    document.getElementById('import-step-mod').style.display = 'block';
+    document.getElementById('import-step-mobs').style.display = 'none';
+    document.getElementById('import-submit-btn').style.display = 'none';
+  } catch (e) {
+    alert("Error reading file entries.");
+  }
+}
+
+function onImportModSelected() {
+  const modIdx = document.getElementById('import-mod-select').value;
+  if (!modIdx) {
+    document.getElementById('import-step-mobs').style.display = 'none';
+    document.getElementById('import-submit-btn').style.display = 'none';
+    return;
+  }
+
+  selectedImportMod = activeImportData.mods[parseInt(modIdx)];
+  const container = document.getElementById('import-mobs-list');
+  container.innerHTML = '';
+
+  if (!selectedImportMod || !selectedImportMod.mobs || selectedImportMod.mobs.length === 0) {
+    container.innerHTML = '<div style="color:var(--muted); font-size:12px; padding:6px; text-align:center;">This mod contains no mobs.</div>';
+    document.getElementById('import-step-mobs').style.display = 'flex';
+    return;
+  }
+
+  selectedImportMod.mobs.forEach((mob, idx) => {
+    const attrStrings = [];
+    if (mob.attributes && typeof mob.attributes === 'object') {
+      Object.entries(mob.attributes).forEach(([k, v]) => {
+        attrStrings.push(`${k}: ${v}`);
+      });
+    }
+    const displayAttrs = attrStrings.length > 0 ? attrStrings.join(' | ') : 'No attributes';
+
+    const row = document.createElement('label');
+    row.style.display = 'flex';
+    row.style.alignItems = 'center';
+    row.style.gap = '10px';
+    row.style.padding = '8px';
+    row.style.background = '#111827';
+    row.style.border = '1px solid var(--border)';
+    row.style.borderRadius = '6px';
+    row.style.cursor = 'pointer';
+    row.innerHTML = `
+      <input type="checkbox" class="import-mob-cb" value="${idx}" checked style="width:15px; height:15px;">
+      <div style="flex:1;">
+        <div style="font-size:13px; font-weight:600; color:#fff;">${esc(mob.name || 'Unnamed')}</div>
+        <div style="font-size:11px; color:var(--muted); font-family:monospace;">${esc(displayAttrs)}</div>
+      </div>
+    `;
+    container.appendChild(row);
+  });
+
+  document.getElementById('import-step-mobs').style.display = 'flex';
+  document.getElementById('import-submit-btn').style.display = 'block';
+}
+
+function toggleSelectAllImportMobs() {
+  const cbs = document.querySelectorAll('.import-mob-cb');
+  if (cbs.length === 0) return;
+  const standard = Array.from(cbs).some(c => c.checked);
+  cbs.forEach(c => c.checked = !standard);
+}
+
+async function executeImportSelection() {
+  const checked = document.querySelectorAll('.import-mob-cb:checked');
+  if (checked.length === 0) {
+    alert("Select at least one mob to import.");
+    return;
+  }
+
+  // Load configuration default fields from root folder to backfill missing items securely
+  let fallbacks = {};
+  try {
+    const db = await getDB();
+    const tx = db.transaction("settings", "readonly");
+    const rootHandle = await new Promise(res => {
+      tx.objectStore("settings").get("root_folder_handle").onsuccess = e => res(e.target.result);
+    });
+    if (rootHandle) {
+      const fileHandle = await rootHandle.getFileHandle('global_attributes.json');
+      const file = await fileHandle.getFile();
+      const text = await file.text();
+      const json = JSON.parse(text);
+      if (Array.isArray(json)) {
+        json.forEach(a => { fallbacks[a.key] = a.default; });
+      }
+    }
+  } catch (e) {}
+
+  let count = 0;
+  const baseOffset = 100;
+
+  checked.forEach((cb, stepIdx) => {
+    const mobIdx = parseInt(cb.value);
+    const mob = selectedImportMod.mobs[mobIdx];
+    if (!mob) return;
+
+    // READ THE EXACT ATTRIBUTES FROM THE LOOT FILE DATA
+    const targetAttrs = {};
+    
+    // 1. Setup global fallback foundations
+    Object.entries(fallbacks).forEach(([k, v]) => { targetAttrs[k] = v; });
+
+    // 2. Map the true live attributes specified in your mod configuration file
+    if (mob.attributes && typeof mob.attributes === 'object') {
+      Object.entries(mob.attributes).forEach(([k, v]) => {
+        targetAttrs[k] = v;
+      });
+    }
+
+    // Auto-link "damage" property value to "dmg" alias if the chart graph depends on it
+    if (targetAttrs.damage !== undefined && targetAttrs.dmg === undefined) {
+      targetAttrs.dmg = targetAttrs.damage;
+    }
+
+    const nodeID = uid();
+    nodes[nodeID] = {
+      id: nodeID,
+      name: mob.name || "Imported Boss",
+      difficulty: "medium",
+      loot: "Pending Drop Rules",
+      notes: `Auto-imported from: ${selectedImportMod.name}`,
+      image: mob.image || null,
+      x: baseOffset + (stepIdx * 220) % 800,
+      y: baseOffset + Math.floor((stepIdx * 220) / 800) * 160,
+      attrs: targetAttrs
+    };
+
+    if (typeof renderNode === "function") renderNode(nodeID);
+    count++;
+  });
+
+  if (typeof updateChart === "function") updateChart();
+  closeImportModal();
+  alert(`🎉 Successfully mapped ${count} bosses onto your workflow diagram with perfect configuration attribute parity!`);
+}
 </script>
 </body>
 </html>

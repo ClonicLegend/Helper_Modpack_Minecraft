@@ -1,0 +1,17 @@
+[
+  {
+    "key": "hp",
+    "label": "HP",
+    "default": 200
+  },
+  {
+    "key": "damage",
+    "label": "Damage",
+    "default": 20
+  },
+  {
+    "key": "defense",
+    "label": "Defense",
+    "default": 12
+  }
+]
