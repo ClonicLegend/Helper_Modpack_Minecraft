@@ -16,6 +16,17 @@
       ],
       "mobs": [
         {
+          "id": "id_mqvexmo1ru6obq",
+          "name": "dsdsd",
+          "image": "",
+          "attributes": {
+            "hp": 200,
+            "damage": 20,
+            "defense": 10,
+            "hellooo": 12
+          }
+        },
+        {
           "id": "id_mqvf8ocinhet79",
           "name": "ddd",
           "image": "",

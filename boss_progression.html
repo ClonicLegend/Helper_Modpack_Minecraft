@@ -289,11 +289,6 @@ textarea.fi { resize: vertical; min-height: 60px; }
   <div style="width: 480px; max-width: 95vw; background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 24px; box-shadow: 0 20px 50px rgba(0,0,0,0.6); display: flex; flex-direction: column; max-height: 85vh;">
     <h3 style="font-size: 16px; font-weight: 700; margin-bottom: 14px; color: #fff; display: flex; align-items: center; gap: 8px;">🤖 Auto-Import Mod Mobs</h3>
     
-    <div id="import-step-file" style="width:100%;">
-      <label style="font-size: 11px; color: var(--muted); text-transform: uppercase; font-weight: 700; display: block; margin-bottom: 6px;">Select Dataset Profile (/loot/)</label>
-      <select id="import-file-select" style="width: 100%; background: var(--input-bg); border: 1px solid var(--border); color: var(--text); padding: 8px 11px; border-radius: 7px; font-size: 13px; outline: none; margin-bottom: 14px; cursor: pointer;" onchange="onImportFileSelected()"></select>
-    </div>
-
     <div id="import-step-mod" style="display:none; width:100%;">
       <label style="font-size: 11px; color: var(--muted); text-transform: uppercase; font-weight: 700; display: block; margin-bottom: 6px;">Select Tracked Mod</label>
       <select id="import-mod-select" style="width: 100%; background: var(--input-bg); border: 1px solid var(--border); color: var(--text); padding: 8px 11px; border-radius: 7px; font-size: 13px; outline: none; margin-bottom: 14px; cursor: pointer;" onchange="onImportModSelected()"></select>
@@ -310,12 +305,6 @@ textarea.fi { resize: vertical; min-height: 60px; }
     <div style="display: flex; gap: 8px; margin-top: 18px; width:100%;">
       <button style="flex: 1; padding: 9px; border-radius: 7px; cursor: pointer; font-size: 13px; font-weight: 600; border: 1px solid var(--border); background: var(--input-bg); color: var(--muted);" onclick="closeImportModal()">Cancel</button>
       <button id="import-submit-btn" style="flex: 1; padding: 9px; border-radius: 7px; cursor: pointer; font-size: 13px; font-weight: 600; border: 1px solid var(--accent); background: var(--accent); color: #fff; display: none;" onclick="executeImportSelection()">Confirm Import</button>
-    </div>
-  </div>
-</div>
-    <div class="modal-btns" style="display: flex; gap: 8px; margin-top: 18px; width:100%;">
-      <button class="cancel" style="flex: 1; padding: 9px; border-radius: 7px; cursor: pointer; font-size: 13px; font-weight: 600; border: 1px solid var(--border); background: var(--input-bg); color: var(--muted);" onclick="closeImportModal()">Cancel</button>
-      <button class="ok" id="import-submit-btn" style="flex: 1; padding: 9px; border-radius: 7px; cursor: pointer; font-size: 13px; font-weight: 600; border: 1px solid var(--accent); background: var(--accent); color: #fff; display: none;" onclick="executeImportSelection()">Confirm Import</button>
     </div>
   </div>
 </div>
@@ -340,6 +329,16 @@ function applyViewportTransform() {
 
 /* ===================== AUTOMATED DIRECT SAVE ENGINE ===================== */
 let currentFileName = "";
+
+// Unsaved-changes tracking: compare live state against the last loaded/saved snapshot
+let lastSavedSnapshot = null;
+function workspaceSnapshot() {
+  return JSON.stringify({ nodes: Object.values(nodes), edges, difficulties, attrDefs, imageLibrary }, (k, v) => k === '_open' ? undefined : v);
+}
+function markSaved() { lastSavedSnapshot = workspaceSnapshot(); }
+window.addEventListener('beforeunload', e => {
+  if (lastSavedSnapshot !== null && workspaceSnapshot() !== lastSavedSnapshot) { e.preventDefault(); e.returnValue = ''; }
+});
 
 function getDB() {
   return new Promise((resolve, reject) => {
@@ -393,6 +392,7 @@ async function syncActiveFileToDisk() {
       await writable.write(json);
       await writable.close();
       
+      markSaved();
       setStatus(`Saved directly to file disk: /bosses/${currentFileName}`);
       alert(`💾 Changes written to your folder successfully!`);
       return;
@@ -402,6 +402,7 @@ async function syncActiveFileToDisk() {
   }
 
   localStorage.setItem('suite_backup_' + currentFileName, json);
+  markSaved();
   alert(`Changes saved to temporary memory cache.`);
 }
 
@@ -421,16 +422,14 @@ let difficulties = [
 ];
 let attrDefs = [
   { key: 'hp', label: 'HP', default: 200 },
-  { key: 'dmg', label: 'Damage', default: 20 },
+  { key: 'damage', label: 'Damage', default: 20 },
   { key: 'defense', label: 'Defense', default: 10 },
-  { key: 'speed', label: 'Speed', default: 5 },
-  { key: 'xp', label: 'XP', default: 100 },
 ];
 let imageLibrary = {};
 
 function uid() { return 'n' + (nodeIdCounter++); }
 function eid() { return 'e' + (edgeIdCounter++); }
-function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function esc(s) { return String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
 function setStatus(m) { document.getElementById('status-hint').textContent = m; }
 function getDiff(key) { return difficulties.find(d => d.key === key) || difficulties[0]; }
 
@@ -523,7 +522,7 @@ function renderNode(id) {
   }
   const diff = getDiff(n.difficulty); const pillStyle = `background:${hexAlpha(diff.color,0.18)};color:${diff.color}`;
   let imgHTML = n.image && imageLibrary[n.image] ? `<img class="node-img" src="${imageLibrary[n.image]}" draggable="false">` : `<div class="node-img-placeholder" style="background:${hexAlpha(diff.color,0.1)}">${diff.emoji}</div>`;
-  const statsHTML = Object.keys(n.attrs).slice(0, 4).map(k => { const def = attrDefs.find(a => a.key === k); return `<div class="stat-row"><span>${def ? def.label : k}</span><span class="stat-val">${n.attrs[k]}</span></div>`; }).join('');
+  const attrs = n.attrs || {}; const statsHTML = Object.keys(attrs).slice(0, 4).map(k => { const def = attrDefs.find(a => a.key === k); return `<div class="stat-row"><span>${esc(def ? def.label : k)}</span><span class="stat-val">${esc(attrs[k])}</span></div>`; }).join('');
   el.style.left = n.x + 'px'; el.style.top  = n.y + 'px';
   el.innerHTML = `${imgHTML}<div class="node-header"><span class="node-name">${esc(n.name)}</span><span class="diff-pill" style="${pillStyle}">${diff.label}</span></div><div class="node-body">${statsHTML}</div><div class="node-port port-out" onmousedown="portMouseDown(event,'${id}')"></div><div class="node-port port-in" onmouseup="portMouseUp(event,'${id}')"></div>`;
   el.classList.toggle('selected', selectedNode === id); el.classList.toggle('connect-source', connectSource === id);
@@ -599,7 +598,7 @@ function renderPanel() {
   const imgKeys = Object.keys(imageLibrary);
   let imgGrid = imgKeys.length ? `<div class="img-thumb-grid"><div class="img-thumb-none ${!n.image?'active':''}" onclick="setNodeImage(null)">✕</div>${imgKeys.map(k => `<img class="img-thumb ${n.image===k?'active':''}" src="${imageLibrary[k]}" title="${esc(k)}" onclick="setNodeImage('${esc(k)}')" draggable="false">`).join('')}</div>` : `<div style="font-size:11px;color:var(--muted)">No images loaded yet.</div>`;
   const connHTML = [...incoming.map(e => `<div class="conn-item"><span>← ${esc(nodes[e.from]?.name)}</span><button class="conn-del" onclick="deleteEdge('${e.id}')">✕</button></div>`), ...outgoing.map(e  => `<div class="conn-item"><span>→ ${esc(nodes[e.to]?.name)}</span><button class="conn-del" onclick="deleteEdge('${e.id}')">✕</button></div>`)].join('') || `<div style="font-size:12px;color:var(--muted)">No connections.</div>`;
-  body.innerHTML = `<div class="fg"><label class="fl">Boss Name</label><input class="fi" type="text" value="${esc(n.name)}" oninput="updateField('name',this.value)"></div><div class="fg"><label class="fl">Difficulty</label><select class="fi" onchange="updateField('difficulty',this.value)">${diffOpts}</select></div><div class="sec-title">Stats</div>${attrRows}<div class="sec-title">Loot &amp; Notes</div><div class="fg"><label class="fl">Loot / Drops</label><input class="fi" type="text" value="${esc(n.loot)}" oninput="updateField('loot',this.value)"></div><div class="fg"><label class="fl">Notes</label><textarea class="fi" rows="3" oninput="updateField('notes',this.value)">${esc(n.notes)}</textarea></div><div class="sec-title">Boss Image</div>${imgGrid}<div class="sec-title">Connections</div><div class="conn-list">${connHTML}</div><button class="del-btn" onclick="deleteNode('${n.id}')">🗑 Delete Boss</button>`;
+  body.innerHTML = `<div class="fg"><label class="fl">Boss Name</label><input class="fi" type="text" value="${esc(n.name)}" oninput="updateField('name',this.value)"></div><div class="fg"><label class="fl">In-game entity ID</label><input class="fi" type="text" value="${esc(n.entityId || '')}" placeholder="modid:entity_name" oninput="updateField('entityId',this.value.trim().toLowerCase())"></div><div class="fg"><label class="fl">Difficulty</label><select class="fi" onchange="updateField('difficulty',this.value)">${diffOpts}</select></div><div class="sec-title">Stats</div>${attrRows}<div class="sec-title">Loot &amp; Notes</div><div class="fg"><label class="fl">Loot / Drops</label><input class="fi" type="text" value="${esc(n.loot)}" oninput="updateField('loot',this.value)"></div><div class="fg"><label class="fl">Notes</label><textarea class="fi" rows="3" oninput="updateField('notes',this.value)">${esc(n.notes)}</textarea></div><div class="sec-title">Boss Image</div>${imgGrid}<div class="sec-title">Connections</div><div class="conn-list">${connHTML}</div><button class="del-btn" onclick="deleteNode('${n.id}')">🗑 Delete Boss</button>`;
 }
 
 function renderGlobalPanel(body) {
@@ -611,7 +610,7 @@ function renderGlobalPanel(body) {
 }
 
 function toggleDiffBlock(i) { difficulties[i]._open = !difficulties[i]._open; const block = document.getElementById('diff-block-' + i); const chev  = document.getElementById('diff-chevron-' + i); if (block) block.style.display = difficulties[i]._open ? 'block' : 'none'; if (chev)  chev.textContent = difficulties[i]._open ? '▾' : '▸'; }
-function updateDiff(i, field, val) { difficulties[i][field] = val; if (field === 'label') difficulties[i].key = val.toLowerCase().replace(/\s+/g,'_') || difficulties[i].key; Object.values(nodes).forEach(n => renderNode(n.id)); updateEdges(); if (currentTab === 'global') renderGlobalPanel(document.getElementById('panel-body')); else renderPanel(); }
+function updateDiff(i, field, val) { difficulties[i][field] = val; if (field === 'label') { const oldKey = difficulties[i].key; const newKey = val.toLowerCase().replace(/\s+/g,'_') || oldKey; if (newKey !== oldKey && !difficulties.some(d => d.key === newKey)) { difficulties[i].key = newKey; Object.values(nodes).forEach(n => { if (n.difficulty === oldKey) n.difficulty = newKey; }); } } Object.values(nodes).forEach(n => renderNode(n.id)); updateEdges(); if (currentTab === 'global') renderGlobalPanel(document.getElementById('panel-body')); else renderPanel(); }
 function removeDiff(i) { if (difficulties.length <= 1) { alert('Need at least one difficulty.'); return; } const removed = difficulties.splice(i, 1)[0]; const fallback = difficulties[0].key; Object.values(nodes).forEach(n => { if (n.difficulty === removed.key) { n.difficulty = fallback; renderNode(n.id); } }); renderPanel(); }
 function addDiff() { difficulties.push({ key: 'new_diff', label: 'New', emoji: '⭐', color: '#3498db', description: '', _open: true }); renderGlobalPanel(document.getElementById('panel-body')); }
 
@@ -685,7 +684,7 @@ function renderChartPanel(body) {
 function topoOrder() { const ids = Object.keys(nodes); const inDeg = {}, adj = {}; ids.forEach(id => { inDeg[id] = 0; adj[id] = []; }); edges.forEach(e => { if (nodes[e.from] && nodes[e.to]) { adj[e.from].push(e.to); inDeg[e.to]++; } }); const queue = ids.filter(id => inDeg[id] === 0); const result = [], visited = new Set(); while (queue.length) { const id = queue.shift(); if (visited.has(id)) continue; visited.add(id); result.push(id); adj[id].forEach(next => { inDeg[next]--; if (inDeg[next] === 0) queue.push(next); }); } return result; }
 function drawChart(order) {
   const canvas = document.getElementById('chart-canvas'); if (!canvas) return; const W = canvas.offsetWidth || 260; canvas.width = W; canvas.height = 180; const ctx = canvas.getContext('2d'); const pad = { top:16, right:16, bottom:28, left:40 }; const cW = W - pad.left - pad.right, cH = canvas.height - pad.top - pad.bottom;
-  const vals = order.map(id => { const n = nodes[id]; return { id, val: chartMetric === 'power' ? Number(n.attrs?.hp||0)*Number(n.attrs?.dmg||0) : Number(n.attrs?.[chartMetric]||0), diff: n.difficulty, name: n.name }; });
+  const vals = order.map(id => { const n = nodes[id]; return { id, val: chartMetric === 'power' ? Number(n.attrs?.hp||0)*Number(n.attrs?.damage ?? n.attrs?.dmg ?? 0) : Number(n.attrs?.[chartMetric]||0), diff: n.difficulty, name: n.name }; });
   const maxVal = Math.max(...vals.map(v => v.val), 1);
   function px(i) { return pad.left + (i / Math.max(vals.length - 1, 1)) * cW; }
   function py(v) { return pad.top + cH - (v / maxVal) * cH; }
@@ -704,7 +703,7 @@ function drawChart(order) {
 
 function autoLayout() {
   const ids = Object.keys(nodes); if (!ids.length) return;
-  const inDeg = {}, adj = {}; ids.forEach(id => { inDeg[id] = 0; adj[id] = []; }); edges.forEach(e => { adj[e.from].push(e.to); inDeg[e.to]++; });
+  const inDeg = {}, adj = {}; ids.forEach(id => { inDeg[id] = 0; adj[id] = []; }); edges.forEach(e => { if (nodes[e.from] && nodes[e.to]) { adj[e.from].push(e.to); inDeg[e.to]++; } });
   const queue = ids.filter(id => inDeg[id] === 0); const layers = [], visited = new Set();
   while (queue.length) { const layer = [...queue]; layers.push(layer); layer.forEach(id => visited.add(id)); queue.length = 0; layer.forEach(id => adj[id].forEach(next => { if (!visited.has(next)) { inDeg[next]--; if (inDeg[next] === 0) queue.push(next); } })); }
   const colW = 200, rowH = 160; layers.forEach((layer, col) => { layer.forEach((id, row) => { nodes[id].x = 60 + col * colW; nodes[id].y = 60 + row * rowH; renderNode(id); }); }); updateEdges();
@@ -734,9 +733,9 @@ document.addEventListener('keydown', e => {
 
 function seedData() {
   const seed = [
-    { name:'Forest Slime', difficulty:'easy', loot:'Slime Ball', notes:'Tutorial boss', x:60, y:100, attrs:{ hp:80, dmg:8, defense:2, speed:3, xp:50 } },
-    { name:'Goblin Chief', difficulty:'easy', loot:'Iron Sword', notes:'Spawns at night', x:60, y:300, attrs:{ hp:180, dmg:15, defense:8, speed:5, xp:150 } },
-    { name:'Stone Golem', difficulty:'medium', loot:'Stone Heart', notes:'Slow, hits hard', x:290, y:200, attrs:{ hp:500, dmg:30, defense:25, speed:2, xp:400 } }
+    { name:'Forest Slime', difficulty:'easy', loot:'Slime Ball', notes:'Tutorial boss', x:60, y:100, attrs:{ hp:80, damage:8, defense:2 } },
+    { name:'Goblin Chief', difficulty:'easy', loot:'Iron Sword', notes:'Spawns at night', x:60, y:300, attrs:{ hp:180, damage:15, defense:8 } },
+    { name:'Stone Golem', difficulty:'medium', loot:'Stone Heart', notes:'Slow, hits hard', x:290, y:200, attrs:{ hp:500, damage:30, defense:25 } }
   ];
   seed.forEach(s => { const id = uid(); nodes[id] = { id, image: null, ...s }; renderNode(id); });
   const ids = Object.keys(nodes); edges.push({ id: eid(), from: ids[0], to: ids[2] }, { id: eid(), from: ids[1], to: ids[2] }); updateEdges();
@@ -763,22 +762,24 @@ window.addEventListener('DOMContentLoaded', () => {
       unpackWorkspaceData(JSON.parse(incomingData)); setStatus(`Opened: ${currentFileName}`);
     } catch(e) { console.error(e); seedData(); }
   } else { seedData(); }
+  markSaved();
 });
 
 /* ===================== WIZARD MOD DATA IMPORT ENGINE ===================== */
-let currentLootFolderHandle = null;
+const MOD_TRACKER_FILE = 'mod_tracker.json';
 let activeImportData = null;
 let selectedImportMod = null;
 
 async function importBossesFromMod() {
   document.getElementById('import-mod-modal').style.display = 'flex';
-  document.getElementById('import-step-mod').style.display = 'none';
+  document.getElementById('import-step-mod').style.display = 'block';
   document.getElementById('import-step-mobs').style.display = 'none';
   document.getElementById('import-submit-btn').style.display = 'none';
-  
-  const fileSelect = document.getElementById('import-file-select');
-  fileSelect.innerHTML = '<option value="">-- Loading profiles... --</option>';
-  
+
+  const modSelect = document.getElementById('import-mod-select');
+  modSelect.innerHTML = '<option value="">-- Loading mod tracker... --</option>';
+  activeImportData = null;
+
   let rootHandle = null;
   try {
     const db = await getDB();
@@ -790,90 +791,39 @@ async function importBossesFromMod() {
     });
   } catch (dbErr) {
     console.error("Failed to read workspace folder handle:", dbErr);
-    fileSelect.innerHTML = '<option value="">Error reading workspace settings (see console)</option>';
+    modSelect.innerHTML = '<option value="">Error reading workspace settings (see console)</option>';
     return;
   }
-  
-  try {
-    if (!rootHandle) {
-      alert("No workspace folder connected. Go to the main dashboard menu first.");
-      // Removed closeImportModal() so the window stays open
-      fileSelect.innerHTML = '<option value="">No workspace folder connected</option>';
-      return;
-    }
-    
-    // --- FIX PATHING & PERMISSION FOR SUBFOLDERS ---
-    // Since this file is inside /bosses/, the browser requires re-verifying permissions for the workspace handle
-    if (typeof rootHandle.requestPermission === 'function') {
-      const opts = { mode: 'read' };
-      if ((await rootHandle.queryPermission(opts)) !== 'granted') {
-        await rootHandle.requestPermission(opts);
-      }
-    }
 
-    const fileNames = [];
-    try {
-      currentLootFolderHandle = await rootHandle.getDirectoryHandle('loot', { create: false });
-      for await (const entry of currentLootFolderHandle.values()) {
-        if (entry.kind === 'file' && entry.name.endsWith('.json')) {
-          fileNames.push(entry.name);
-        }
-      }
-    } catch (pathErr) {
-      console.error("Directory path routing failed:", pathErr);
-      fileSelect.innerHTML = '<option value="">Could not access /loot/ folder from this directory</option>';
-      return; // Safe exit without closing the window layout
-    }
-    // -----------------------------------------------
-    
-    if (fileNames.length === 0) {
-      fileSelect.innerHTML = '<option value="">No profile files found inside /loot/</option>';
-      return;
-    }
-    
-    fileSelect.innerHTML = '<option value="">-- Select a Profile --</option>' + 
-      fileNames.map(f => `<option value="${esc(f)}">${esc(f)}</option>`).join('');
-    
-  } catch (err) {
-    console.error("Failed to run import system:", err);
-    fileSelect.innerHTML = '<option value="">Unexpected error (see console)</option>';
+  if (!rootHandle) {
+    modSelect.innerHTML = '<option value="">No workspace folder connected — open the Main Menu first</option>';
+    return;
   }
+
+  try {
+    const opts = { mode: 'read' };
+    if (typeof rootHandle.queryPermission === 'function' && (await rootHandle.queryPermission(opts)) !== 'granted') {
+      await rootHandle.requestPermission(opts);
+    }
+    const fileHandle = await rootHandle.getFileHandle(MOD_TRACKER_FILE);
+    activeImportData = JSON.parse(await (await fileHandle.getFile()).text());
+  } catch (err) {
+    console.error(`Could not read ${MOD_TRACKER_FILE}:`, err);
+    modSelect.innerHTML = `<option value="">No ${MOD_TRACKER_FILE} found — open the Mod Tracker and save first</option>`;
+    return;
+  }
+
+  const trackedMods = Array.isArray(activeImportData?.mods) ? activeImportData.mods : [];
+  if (trackedMods.length === 0) {
+    modSelect.innerHTML = '<option value="">No mods tracked yet</option>';
+    return;
+  }
+  modSelect.innerHTML = '<option value="">-- Select a Mod --</option>' +
+    trackedMods.map((m, i) => `<option value="${i}">${esc(m.name)} (${(m.mobs || []).length} mobs)</option>`).join('');
 }
+
 function closeImportModal() {
   document.getElementById('import-mod-modal').style.display = 'none';
-}
-
-async function onImportFileSelected() {
-  const filename = document.getElementById('import-file-select').value;
-  if (!filename) {
-    document.getElementById('import-step-mod').style.display = 'none';
-    document.getElementById('import-step-mobs').style.display = 'none';
-    document.getElementById('import-submit-btn').style.display = 'none';
-    return;
-  }
-
-  try {
-    const fileHandle = await currentLootFolderHandle.getFileHandle(filename);
-    const file = await fileHandle.getFile();
-    const text = await file.text();
-    activeImportData = JSON.parse(text);
-
-    const modSelect = document.getElementById('import-mod-select');
-    if (!activeImportData || !activeImportData.mods || !Array.isArray(activeImportData.mods) || activeImportData.mods.length === 0) {
-      modSelect.innerHTML = '<option value="">No mods found in file</option>';
-      document.getElementById('import-step-mod').style.display = 'block';
-      return;
-    }
-
-    modSelect.innerHTML = '<option value="">-- Select a Mod --</option>' + 
-      activeImportData.mods.map((m, i) => `<option value="${i}">${esc(m.name)}</option>`).join('');
-    
-    document.getElementById('import-step-mod').style.display = 'block';
-    document.getElementById('import-step-mobs').style.display = 'none';
-    document.getElementById('import-submit-btn').style.display = 'none';
-  } catch (e) {
-    alert("Error reading file entries.");
-  }
 }
 
 function onImportModSelected() {
@@ -915,7 +865,7 @@ function onImportModSelected() {
     row.innerHTML = `
       <input type="checkbox" class="import-mob-cb" value="${idx}" checked style="width:15px; height:15px;">
       <div style="flex:1;">
-        <div style="font-size:13px; font-weight:600; color:#fff;">${esc(mob.name || 'Unnamed')}</div>
+        <div style="font-size:13px; font-weight:600; color:#fff;">${esc(mob.name || 'Unnamed')} <span style="font-size:11px; font-weight:400; color:var(--accent2); font-family:monospace;">${esc(mobEntityId(selectedImportMod, mob) || 'no in-game id')}</span></div>
         <div style="font-size:11px; color:var(--muted); font-family:monospace;">${esc(displayAttrs)}</div>
       </div>
     `;
@@ -924,6 +874,16 @@ function onImportModSelected() {
 
   document.getElementById('import-step-mobs').style.display = 'flex';
   document.getElementById('import-submit-btn').style.display = 'block';
+}
+
+// Same rule as the Mod Tracker: mod namespace + mob's in-game name, unless the name is already a full id.
+function mobEntityId(mod, mob) {
+  const clean = s => String(s || '').trim().toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_.\/:-]/g, '');
+  const name = clean(mob.entityName);
+  if (!name) return '';
+  if (name.includes(':')) return name;
+  const ns = clean(mod.namespace).replace(/:+$/, '');
+  return ns ? `${ns}:${name}` : name;
 }
 
 function toggleSelectAllImportMobs() {
@@ -942,6 +902,7 @@ async function executeImportSelection() {
 
   // Load configuration default fields from root folder to backfill missing items securely
   let fallbacks = {};
+  attrDefs.forEach(a => { fallbacks[a.key] = a.default; });
   try {
     const db = await getDB();
     const tx = db.transaction("settings", "readonly");
@@ -980,15 +941,16 @@ async function executeImportSelection() {
       });
     }
 
-    // Auto-link "damage" property value to "dmg" alias if the chart graph depends on it
-    if (targetAttrs.damage !== undefined && targetAttrs.dmg === undefined) {
-      targetAttrs.dmg = targetAttrs.damage;
-    }
+    // Register attributes this project doesn't know yet so they show up in the inspector
+    Object.keys(targetAttrs).forEach(k => {
+      if (!attrDefs.some(a => a.key === k)) attrDefs.push({ key: k, label: k, default: fallbacks[k] ?? 0 });
+    });
 
     const nodeID = uid();
     nodes[nodeID] = {
       id: nodeID,
       name: mob.name || "Imported Boss",
+      entityId: mobEntityId(selectedImportMod, mob),
       difficulty: "medium",
       loot: "Pending Drop Rules",
       notes: `Auto-imported from: ${selectedImportMod.name}`,
@@ -1002,7 +964,8 @@ async function executeImportSelection() {
     count++;
   });
 
-  if (typeof updateChart === "function") updateChart();
+  updateEdges();
+  renderPanel();
   closeImportModal();
   alert(`🎉 Successfully mapped ${count} bosses onto your workflow diagram with perfect configuration attribute parity!`);
 }

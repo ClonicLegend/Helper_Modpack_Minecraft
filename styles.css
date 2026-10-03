@@ -1,0 +1,156 @@
+* { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg: #12121f;
+  --surface: #1a1a2e;
+  --panel: #0f3460;
+  --accent: #e94560;
+  --accent2: #f5a623;
+  --text: #eaeaea;
+  --muted: #7a86a0;
+  --border: #252a40;
+  --node-bg: #1c2438;
+  --node-border: #2e4070;
+  --input-bg: #111827;
+}
+
+body {
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  overflow-y: auto;
+}
+
+.hub-container {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 40px;
+  width: 100%;
+  max-width: 950px;
+  box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+}
+.hub-header { text-align: center; margin-bottom: 32px; border-bottom: 1px solid var(--border); padding-bottom: 24px; }
+.hub-header h1 { font-size: 32px; color: #fff; margin-bottom: 8px; }
+.hub-header p { font-size: 14px; color: var(--muted); }
+
+.folder-badge {
+  background: #1e352f; border: 1px solid #27ae60; color: #5ddb8e;
+  padding: 6px 14px; border-radius: 6px; font-size: 13px; font-weight: 600;
+  display: inline-flex; align-items: center; gap: 6px; margin-top: 14px;
+}
+
+.hub-layout { display: grid; grid-template-columns: 420px 1fr; gap: 30px; }
+.hub-left, .hub-right { display: flex; flex-direction: column; gap: 16px; }
+
+.hub-section-title { font-size: 12px; color: var(--accent); font-weight: 700; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px; display: block; }
+
+.app-card {
+  background: var(--node-bg);
+  border: 2px solid var(--node-border);
+  border-radius: 12px;
+  padding: 20px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  position: relative;
+}
+.app-card:hover:not(.disabled) {
+  border-color: var(--accent2);
+  background: #222d48;
+  transform: translateY(-2px);
+}
+.app-card.active-module {
+  border-color: var(--accent);
+  background: rgba(233, 69, 96, 0.08);
+}
+.app-card.disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  border-style: dashed;
+}
+.app-card-icon { font-size: 36px; flex-shrink: 0; }
+.app-card-info { flex: 1; }
+.app-card-info h3 { font-size: 16px; color: #fff; margin-bottom: 2px; }
+.app-card-info p { font-size: 12px; color: var(--muted); line-height: 1.4; }
+.badge-tag {
+  position: absolute; top: 12px; right: 12px; font-size: 9px; font-weight: 700;
+  padding: 2px 6px; border-radius: 20px; text-transform: uppercase; letter-spacing: 0.5px;
+}
+.badge-tag.online { background: rgba(39, 174, 96, 0.2); color: #27ae60; }
+.badge-tag.locked { background: rgba(122, 134, 160, 0.15); color: var(--muted); }
+
+.file-panel {
+  background: var(--input-bg);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 20px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 380px;
+}
+.file-panel-content { display: flex; flex-direction: column; flex: 1; }
+.file-panel-content.blurred { filter: blur(4px); pointer-events: none; opacity: 0.5; }
+
+.file-list-header {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: 14px; padding-bottom: 10px; border-bottom: 1px solid var(--border);
+}
+.file-list-header h2 { font-size: 15px; color: #fff; }
+
+.project-list-container {
+  flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 8px;
+}
+.project-item {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 12px 16px; background: var(--node-bg); border: 1px solid var(--border);
+  border-radius: 8px; cursor: pointer; transition: background 0.15s;
+}
+.project-item:hover { background: #222d48; border-color: var(--accent2); }
+.project-meta { display: flex; flex-direction: column; gap: 2px; }
+.project-name { font-size: 13px; font-weight: 600; color: #fff; }
+.project-date { font-size: 11px; color: var(--muted); }
+.proj-btn {
+  background: var(--panel); border: none; color: #fff; 
+  font-size: 12px; font-weight: 600; cursor: pointer; padding: 6px 12px; border-radius: 6px;
+  transition: background 0.1s;
+}
+.proj-btn:hover { background: var(--accent); }
+
+.no-projects { text-align: center; color: var(--muted); font-size: 13px; padding: 60px 20px; line-height: 1.6; margin: auto; }
+.add-btn {
+  width: 100%; padding: 10px; margin-top: 14px; background: rgba(245, 166, 35, 0.1);
+  border: 1px dashed var(--accent2); color: var(--accent2); border-radius: 8px;
+  cursor: pointer; font-size: 13px; font-weight: 600; transition: all 0.15s;
+}
+.add-btn:hover { background: rgba(245, 166, 35, 0.2); color: #fff; }
+
+/* GLOBAL ATTRIBUTES MODAL STYLING */
+#global-attrs-modal {
+  display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7);
+  align-items: center; justify-content: center; z-index: 2000;
+}
+#global-attrs-modal.open { display: flex; }
+.modal-box {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 14px; padding: 26px 24px; width: 480px; max-width: 95vw;
+  box-shadow: 0 20px 50px rgba(0,0,0,0.6); display: flex; flex-direction: column; gap: 14px;
+}
+.modal-box h3 { font-size: 18px; font-weight: 700; color: #fff; display: flex; justify-content: space-between; align-items: center; }
+.attrs-editor-list { max-height: 250px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; padding-right: 4px; }
+.attr-edit-row { display: flex; gap: 8px; align-items: center; }
+.modal-fi { background: var(--input-bg); border: 1px solid var(--border); color: var(--text); padding: 8px 11px; border-radius: 7px; font-size: 13px; outline: none; }
+.modal-fi:focus { border-color: var(--accent); }
+.attr-del-btn { background: none; border: none; color: #e74c3c; cursor: pointer; font-size: 16px; padding: 4px 8px; }
+.modal-btns { display: flex; gap: 8px; margin-top: 10px; }
+.modal-btns button { flex: 1; padding: 10px; border-radius: 7px; cursor: pointer; font-size: 13px; font-weight: 600; border: 1px solid var(--border); }
+.modal-btns .ok { background: var(--accent); border-color: var(--accent); color: #fff; }
+.modal-btns .ok:hover { background: #c73050; }
+.modal-btns .cancel { background: var(--input-bg); color: var(--muted); }

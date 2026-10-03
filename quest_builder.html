@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FTB Quests Builder</title>
+<link rel="stylesheet" href="quest_builder.css">
+</head>
+<body>
+
+<div id="topbar">
+  <h1>📜 FTB Quests Builder</h1>
+  <span class="tb-file" id="project-name"></span>
+  <div class="tb-sep"></div>
+  <button class="tb-btn" data-action="hub">🏠 Main Menu</button>
+  <button class="tb-btn accent" data-action="save">💾 Save</button>
+  <div class="tb-sep"></div>
+  <button class="tb-btn" data-action="add-quest">＋ Quest</button>
+  <button class="tb-btn" id="connect-btn" data-action="connect">🔗 Link</button>
+  <button class="tb-btn" data-action="import-bosses">⚔️ Bosses → Quests</button>
+  <div class="tb-sep"></div>
+  <button class="tb-btn" data-action="import-snbt">📥 Import .snbt</button>
+  <button class="tb-btn" data-action="import-game">📂 Import from game</button>
+  <button class="tb-btn export" data-action="export-game">🚀 Export to game</button>
+  <div class="tb-spacer"></div>
+  <label class="tb-hint">Minecraft
+    <select id="target-select" class="tb-select">
+      <option value="1.21">1.21+</option>
+      <option value="1.20">1.20.x / 1.19 / 1.18</option>
+    </select>
+  </label>
+</div>
+
+<div id="main">
+  <div id="sidebar">
+    <div class="side-title">Chapters</div>
+    <div id="chapter-list"></div>
+    <button class="add-btn" data-action="add-chapter">＋ New Chapter</button>
+  </div>
+
+  <div id="canvas-wrap">
+    <div id="canvas-world">
+      <svg id="edges">
+        <defs>
+          <marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#4a6fa5"/></marker>
+          <marker id="arrow-sel" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#e94560"/></marker>
+        </defs>
+        <g id="edges-g"></g>
+        <line id="drag-line" stroke="#f5a623" stroke-width="2" stroke-dasharray="5,4" display="none"/>
+      </svg>
+      <div id="nodes-layer"></div>
+    </div>
+    <div id="canvas-hint">Double-click: new quest · Drag ● port or Shift+click: add dependency · Wheel: zoom · Del: delete</div>
+    <div id="zoom-ctl">
+      <button data-action="zoom-out">−</button><span id="zoom-lbl">100%</span><button data-action="zoom-in">＋</button><button data-action="zoom-fit" title="Fit chapter">⤢</button>
+    </div>
+  </div>
+
+  <div id="panel">
+    <div id="panel-tabs">
+      <button class="ptab active" data-tab="inspector">Inspector</button>
+      <button class="ptab" data-tab="snbt">SNBT</button>
+      <button class="ptab" data-tab="problems">Problems <span id="problem-count"></span></button>
+    </div>
+    <div id="panel-body"></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="boss-modal">
+  <div class="modal">
+    <h3>⚔️ Boss Project → Quests</h3>
+    <p class="modal-sub">Each boss becomes a quest with a <b>Kill</b> task. Progression links become quest dependencies.</p>
+    <div class="fg"><label class="fl">Boss project (/bosses/)</label><select class="fi" id="boss-file"></select></div>
+    <p class="modal-sub">Bosses imported from the Mod Tracker carry their in-game id (e.g. <code>cataclysm:ignis</code>). For bosses without one, the id is guessed as <code>namespace:boss_name</code>:</p>
+    <div class="fg"><label class="fl">Fallback namespace (mod id)</label><input class="fi" id="boss-ns" placeholder="e.g. cataclysm" value="minecraft"></div>
+    <div class="modal-btns">
+      <button class="cancel" data-action="close-modal">Cancel</button>
+      <button class="ok" data-action="run-boss-import">Import into this chapter</button>
+    </div>
+  </div>
+</div>
+
+<input type="file" id="snbt-input" accept=".snbt" multiple hidden>
+
+<script src="ftbq_snbt.js"></script>
+<script src="quest_builder.js"></script>
+</body>
+</html>
