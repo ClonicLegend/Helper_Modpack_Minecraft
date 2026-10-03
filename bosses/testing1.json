@@ -1,0 +1,96 @@
+{
+  "nodes": [
+    {
+      "id": "n1",
+      "name": "New Boss",
+      "difficulty": "easy",
+      "attrs": {
+        "hp": 200,
+        "damage": 20,
+        "defense": 10,
+        "cock": 0
+      },
+      "image": null,
+      "loot": "",
+      "notes": "",
+      "x": 474.5272266550863,
+      "y": 211.07069743062232
+    },
+    {
+      "id": "n2",
+      "name": "New Boss",
+      "difficulty": "easy",
+      "attrs": {
+        "hp": 200,
+        "damage": 20,
+        "defense": 10,
+        "cock": 0
+      },
+      "image": null,
+      "loot": "",
+      "notes": "",
+      "x": 756.3293035973338,
+      "y": 199.35684399692263
+    }
+  ],
+  "edges": [
+    {
+      "id": "e1",
+      "from": "n1",
+      "to": "n2"
+    }
+  ],
+  "difficulties": [
+    {
+      "key": "easy",
+      "label": "Easy",
+      "emoji": "🐢",
+      "color": "#27ae60",
+      "description": "Early game challenge tiers."
+    },
+    {
+      "key": "medium",
+      "label": "Medium",
+      "emoji": "🐺",
+      "color": "#f39c12",
+      "description": "Mid game challenge tiers."
+    },
+    {
+      "key": "hard",
+      "label": "Hard",
+      "emoji": "🔥",
+      "color": "#e74c3c",
+      "description": "Late game baseline scaling."
+    },
+    {
+      "key": "legendary",
+      "label": "Legendary",
+      "emoji": "💀",
+      "color": "#9b59b6",
+      "description": "Pinnacle map hazards."
+    }
+  ],
+  "attrDefs": [
+    {
+      "key": "hp",
+      "label": "HP",
+      "default": 200
+    },
+    {
+      "key": "damage",
+      "label": "Damage",
+      "default": 20
+    },
+    {
+      "key": "defense",
+      "label": "Defense",
+      "default": 10
+    },
+    {
+      "key": "cock",
+      "label": "cock",
+      "default": 0
+    }
+  ],
+  "imageLibrary": {}
+}

@@ -110,9 +110,10 @@ body {
 /* MOD CARDS */
 .mod-card {
   background: var(--card); border: 1px solid var(--border); border-radius: 8px;
-  padding: 12px 16px; display: flex; align-items: center; gap: 16px; transition: background 0.15s;
+  transition: background 0.15s; overflow: hidden;
 }
 .mod-card:hover { background: var(--card-h); border-color: var(--accent); }
+.mod-card-top { display: flex; align-items: center; gap: 16px; padding: 12px 16px; }
 .mod-img-wrap { width: 64px; height: 64px; border-radius: 6px; overflow: hidden; flex-shrink: 0; background: var(--entry-bg); display: flex; align-items: center; justify-content: center; }
 .mod-img { width: 100%; height: 100%; object-fit: cover; }
 .mod-icon-placeholder { font-size: 28px; }
@@ -123,6 +124,17 @@ body {
 .mod-link:hover { text-decoration: underline; color: var(--accent2); }
 .mod-notes { font-size: 12px; color: var(--text); line-height: 1.4; margin-top: 4px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 
+.mod-mobs-toggle {
+  display: inline-flex; align-items: center; gap: 6px; background: rgba(255,255,255,0.05);
+  border: 1px solid var(--border); color: var(--subtext); font-size: 11px; font-weight: bold;
+  cursor: pointer; padding: 5px 10px; margin-top: 6px; width: fit-content; border-radius: 20px;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+.mod-mobs-toggle:hover { background: rgba(255,193,7,0.12); color: var(--gold); border-color: var(--gold); }
+.mod-mobs-toggle .chevron { display: inline-block; font-size: 9px; transition: transform 0.2s; }
+.mod-mobs-toggle.expanded .chevron { transform: rotate(90deg); }
+.mob-count-pill { background: rgba(0,0,0,0.3); padding: 1px 7px; border-radius: 10px; font-size: 10px; }
+
 .mod-card-actions { display: flex; gap: 6px; }
 .icon-btn { background: none; border: none; font-size: 14px; cursor: pointer; padding: 6px; border-radius: 4px; transition: background 0.1s; }
 .icon-btn.edit { color: var(--accent2); }
@@ -130,8 +142,61 @@ body {
 .icon-btn.del { color: var(--danger); }
 .icon-btn.del:hover { background: rgba(239, 83, 80, 0.15); }
 
+/* MOBS SUB-SECTION — "Bestiary" tile grid */
+.mod-mobs-section { border-top: 1px solid var(--border); background: linear-gradient(180deg, rgba(0,0,0,0.28), rgba(0,0,0,0.1)); padding: 14px 16px 16px; display: flex; flex-direction: column; gap: 10px; }
+.mod-mobs-header { display: flex; justify-content: space-between; align-items: center; }
+.mod-mobs-header .mmh-title { font-size: 11px; font-weight: 800; color: var(--gold); text-transform: uppercase; letter-spacing: 0.8px; display: flex; align-items: center; gap: 6px; }
+.add-mob-btn { background: transparent !important; border: 1px dashed var(--accent2) !important; color: var(--accent2) !important; padding: 5px 12px !important; border-radius: 20px !important; font-size: 11px !important; }
+.add-mob-btn:hover { background: rgba(129, 199, 132, 0.12) !important; }
+
+.mob-list { display: flex; flex-wrap: wrap; gap: 10px; }
+
+.mob-tile {
+  width: 168px; background: linear-gradient(165deg, var(--entry-bg), #081421);
+  border: 1px solid var(--border); border-radius: 10px; overflow: hidden; position: relative;
+  transition: transform 0.15s, border-color 0.15s, box-shadow 0.15s;
+}
+.mob-tile:hover { transform: translateY(-3px); border-color: var(--gold); box-shadow: 0 8px 16px rgba(0,0,0,0.4); }
+.mob-tile-img-wrap { width: 100%; height: 80px; background: var(--card); display: flex; align-items: center; justify-content: center; overflow: hidden; border-bottom: 2px solid var(--gold); }
+.mob-tile-img { width: 100%; height: 100%; object-fit: cover; }
+.mob-tile-icon-placeholder { font-size: 30px; }
+.mob-tile-body { padding: 8px 9px 9px; }
+.mob-tile-name { font-size: 12.5px; font-weight: 800; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 7px; }
+
+.mob-attr-pills { display: flex; flex-wrap: wrap; gap: 4px; }
+.mob-attr-pill {
+  font-size: 10px; font-weight: 700; padding: 2px 7px 2px 5px; border-radius: 20px;
+  display: inline-flex; align-items: center; gap: 3px;
+  background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.08);
+}
+
+.mob-tile-actions { position: absolute; top: 5px; right: 5px; display: flex; gap: 2px; opacity: 0; transition: opacity 0.15s; }
+.mob-tile:hover .mob-tile-actions { opacity: 1; }
+.mob-tile-actions .icon-btn { background: rgba(0,0,0,0.6); border-radius: 5px; padding: 3px 5px; font-size: 11px; }
+
+.mob-empty-note { font-size: 12px; color: var(--subtext); padding: 16px; text-align: center; border: 1px dashed var(--border); border-radius: 8px; background: rgba(255,255,255,0.02); width: 100%; }
+
+.attr-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
 .empty-state { text-align: center; margin: auto; color: var(--subtext); font-size: 13px; line-height: 1.6; padding: 40px; }
 .empty-state-icon { font-size: 40px; margin-bottom: 8px; color: var(--accent); }
+
+.mod-cat-badge {
+  display: inline-block; font-size: 10px; font-weight: bold; text-transform: uppercase;
+  letter-spacing: 0.5px; color: var(--bg); background: var(--accent2);
+  padding: 2px 8px; border-radius: 10px; width: fit-content;
+}
+.mod-cat-badge.uncategorized { background: var(--entry-bg); color: var(--subtext); }
+.mod-cat-badges { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 2px; }
+.category-item.all-item { border-bottom: 1px solid var(--border); margin-bottom: 8px; padding-bottom: 12px; }
+
+.category-checkbox-list {
+  display: flex; flex-direction: column; gap: 6px; max-height: 160px; overflow-y: auto;
+  background: var(--entry-bg); border: 1px solid var(--border); border-radius: 6px; padding: 8px;
+}
+.cb-row { display: flex; align-items: center; gap: 8px; font-size: 13px; cursor: pointer; }
+.cb-row input { accent-color: var(--accent); width: 14px; height: 14px; cursor: pointer; }
+.cb-empty-note { font-size: 12px; color: var(--subtext); }
 
 /* MODAL CONFIG OVERLAYS */
 .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center; z-index: 1000; }
@@ -153,6 +218,7 @@ body {
   <h1>⛏️ Mod Tracker Workspace</h1>
   <div class="tb-sep"></div>
   <button class="tb-btn" onclick="returnToHub()">🏠 Main Menu</button>
+  <button class="tb-btn" onclick="verifyJsonAttributes()" style="background: #1a2936; border-color: #ffc107; color: #ffc107;">🔍 Verify Integrity</button>
   <button class="tb-btn save" id="disk-save-btn" onclick="commitChangesToDisk()" style="display: none;">💾 Sync File Data</button>
   <div class="tb-spacer"></div>
   <div class="search-container">
@@ -163,7 +229,7 @@ body {
 
 <div id="main">
   <div id="sidebar">
-    <div class="sidebar-title">Categories</div>
+    <div class="sidebar-title">Filter by Category</div>
     <div class="category-list" id="category-injector"></div>
     <div class="sidebar-controls">
       <button class="tb-btn action-btn-wide" onclick="triggerAddCategory()">+ New Category</button>
@@ -172,11 +238,11 @@ body {
 
   <div id="content-area">
     <div class="content-header">
-      <div class="content-title" id="active-cat-title">← Select a Category</div>
-      <div class="content-actions" id="cat-action-group" style="display: none;">
+      <div class="content-title" id="active-cat-title">All Mods</div>
+      <div class="content-actions" id="cat-action-group">
         <button class="tb-btn" style="background:var(--card);" onclick="triggerAddModCard()">➕ Add Mod</button>
-        <button class="tb-btn" onclick="triggerRenameCategory()">✎ Rename</button>
-        <button class="tb-btn" style="background:var(--danger); color:white;" onclick="triggerDeleteCategory()">🗑 Delete Cat.</button>
+        <button class="tb-btn" id="rename-cat-btn" onclick="triggerRenameCategory()" style="display:none;">✎ Rename</button>
+        <button class="tb-btn" id="delete-cat-btn" style="background:var(--danger); color:white; display:none;" onclick="triggerDeleteCategory()">🗑 Delete Cat.</button>
       </div>
     </div>
     <div class="stats-lbl" id="stats-counter-lbl"></div>
@@ -187,6 +253,10 @@ body {
 <div class="modal-overlay" id="mod-modal" style="display: none;">
   <div class="modal">
     <h3 id="modal-header-title">Add Mod Parameters</h3>
+    <div class="fg">
+      <label class="fl">Categories * (select one or more)</label>
+      <div class="category-checkbox-list" id="form-mod-categories"></div>
+    </div>
     <div class="fg">
       <label class="fl">Mod Name *</label>
       <input type="text" class="fi" id="form-mod-name" placeholder="e.g., Applied Energistics 2">
@@ -210,13 +280,50 @@ body {
   </div>
 </div>
 
-<script>
-let currentFileName = "";
-let dataset = { categories: {} }; 
-let activeCategory = null;
-let editingModReference = null;
+<div class="modal-overlay" id="mob-modal" style="display: none;">
+  <div class="modal">
+    <h3 id="mob-modal-header-title">Add Mob</h3>
+    <div class="fg">
+      <label class="fl">Mob Name *</label>
+      <input type="text" class="fi" id="form-mob-name" placeholder="e.g., Ender Dragon">
+    </div>
+    <div class="fg">
+      <label class="fl">Image URL or Local Folder File</label>
+      <input type="text" class="fi" id="form-mob-image" placeholder="Paste link or local path...">
+    </div>
+    <div class="fg">
+      <label class="fl">Attributes</label>
+      <div class="attr-grid" id="form-mob-attrs"></div>
+    </div>
+    <div class="modal-btns">
+      <button class="ok" onclick="saveMobFormModalData()">✓ Save</button>
+      <button class="cancel" onclick="closeMobFormModal()">✕ Cancel</button>
+    </div>
+  </div>
+</div>
 
-window.addEventListener('DOMContentLoaded', () => {
+<script>
+// Embedded copy of global_attributes.json — used immediately and as a fallback
+// if the live file can't be fetched (e.g. when this page is opened directly from disk).
+const FALLBACK_ATTRIBUTE_SCHEMA = [
+  { "key": "hp", "label": "HP", "default": 200 },
+  { "key": "damage", "label": "Damage", "default": 20 },
+  { "key": "defense", "label": "Defense", "default": 10 }
+];
+
+let currentFileName = "";
+let categoryNames = [];   // array of category name strings
+let mods = [];             // flat list: { id, name, link, image, notes, categories: [], mobs: [] }
+let activeCategory = null; // null = "All Mods" (no filter)
+let editingModReference = null;
+let ATTRIBUTE_SCHEMA = FALLBACK_ATTRIBUTE_SCHEMA;
+let editingMobParentMod = null;
+let editingMobReference = null;
+let expandedModIds = new Set();
+
+window.addEventListener('DOMContentLoaded', async () => {
+  await loadAttributeSchema();
+  
   const incomingFile = sessionStorage.getItem('active_project_filename');
   const incomingData = sessionStorage.getItem('active_project_payload');
   
@@ -227,33 +334,152 @@ window.addEventListener('DOMContentLoaded', () => {
       document.getElementById('disk-save-btn').textContent = `💾 Save to ${currentFileName}`;
       
       const parsed = JSON.parse(incomingData);
-      dataset = parsed.categories ? parsed : { categories: parsed };
-      
-      const categoriesKeys = Object.keys(dataset.categories);
-      if(categoriesKeys.length > 0) {
-        selectActiveCategory(categoriesKeys[0]);
-      }
+      loadDataset(parsed);
     } catch(e) {
       console.error(e);
     }
   }
-  renderCategorySidebar();
+  selectActiveCategory(null);
 });
 
+async function loadAttributeSchema() {
+  try {
+    const stored = sessionStorage.getItem('global_attributes_payload');
+    if (stored) { ATTRIBUTE_SCHEMA = JSON.parse(stored); return; }
+  } catch(e) { }
+  
+  try {
+    const db = await getWorkspaceDB();
+    const tx = db.transaction("settings", "readonly");
+    const rootHandle = await new Promise(res => {
+      tx.objectStore("settings").get("root_folder_handle").onsuccess = e => res(e.target.result);
+    });
+
+    if (rootHandle) {
+      // Access global_attributes.json directly in the root folder context
+      const fileHandle = await rootHandle.getFileHandle('global_attributes.json');
+      const file = await fileHandle.getFile();
+      const text = await file.text();
+      const json = JSON.parse(text);
+      if (Array.isArray(json)) {
+        ATTRIBUTE_SCHEMA = json;
+        return;
+      }
+    }
+  } catch(e) { console.warn("Could not read root global_attributes.json handle directly:", e); }
+
+  try {
+    const res = await fetch('../global_attributes.json');
+    if (res.ok) {
+      const json = await res.json();
+      if (Array.isArray(json)) ATTRIBUTE_SCHEMA = json;
+    }
+  } catch(e) { }
+}
+
+async function fetchExistingData() {
+  try {
+    const db = await getWorkspaceDB();
+    const tx = db.transaction("settings", "readonly");
+    const rootHandle = await new Promise(res => {
+      tx.objectStore("settings").get("root_folder_handle").onsuccess = e => res(e.target.result);
+    });
+
+    if (rootHandle) {
+      // Step explicitly into the loot directory handle to load file progress
+      const lootFolder = await rootHandle.getDirectoryHandle('loot', { create: false });
+      const fileHandle = await lootFolder.getFileHandle(currentFileName);
+      const file = await fileHandle.getFile();
+      const text = await file.text();
+      const parsed = JSON.parse(text);
+      loadDataset(parsed);
+      return;
+    }
+  } catch (e) {
+    console.warn("Direct FileSystem loot subfolder fetch failed, attempting session fallback.", e);
+  }
+
+  const incomingData = sessionStorage.getItem('active_project_payload');
+  if (incomingData) {
+    loadDataset(JSON.parse(incomingData));
+  }
+}
+
+
+
+function generateId() {
+  return 'id_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+}
+
+function defaultAttributes() {
+  const obj = {};
+  ATTRIBUTE_SCHEMA.forEach(a => obj[a.key] = a.default);
+  return obj;
+}
+
+function loadDataset(parsed) {
+  if (Array.isArray(parsed.categoryNames) && Array.isArray(parsed.mods)) {
+    // Current format
+    categoryNames = parsed.categoryNames;
+    mods = parsed.mods.map(normalizeMod);
+    return;
+  }
+  // Legacy format: { categories: { catName: [modObjects] } } — one category per mod, no mobs
+  const legacy = parsed.categories || parsed;
+  categoryNames = Object.keys(legacy);
+  mods = [];
+  categoryNames.forEach(cat => {
+    (legacy[cat] || []).forEach(m => mods.push(normalizeMod({ ...m, categories: [cat] })));
+  });
+}
+
+function normalizeMod(m) {
+  return {
+    id: m.id || generateId(),
+    name: m.name,
+    link: m.link || "",
+    image: m.image || "",
+    notes: m.notes || "",
+    categories: Array.isArray(m.categories) ? m.categories : [],
+    mobs: Array.isArray(m.mobs) ? m.mobs.map(normalizeMob_) : []
+  };
+}
+
+function normalizeMob_(mob) {
+  return {
+    id: mob.id || generateId(),
+    name: mob.name,
+    image: mob.image || "",
+    attributes: { ...defaultAttributes(), ...(mob.attributes || {}) }
+  };
+}
+
 function returnToHub() { window.location.href = "index.html"; }
+
+function modCountForCategory(cat) {
+  return mods.filter(m => m.categories.includes(cat)).length;
+}
 
 function renderCategorySidebar() {
   const container = document.getElementById('category-injector');
   container.innerHTML = '';
   
-  const categories = Object.keys(dataset.categories || {});
-  if (categories.length === 0) {
-    container.innerHTML = `<div style="font-size:11px; text-align:center; padding:20px; color:var(--subtext);">No categories.</div>`;
+  const allDiv = document.createElement('div');
+  allDiv.className = `category-item all-item ${activeCategory === null ? 'active' : ''}`;
+  allDiv.innerHTML = `
+    <span class="cat-name">📦 All Mods</span>
+    <span class="cat-count">${mods.length}</span>
+  `;
+  allDiv.onclick = () => selectActiveCategory(null);
+  container.appendChild(allDiv);
+  
+  if (categoryNames.length === 0) {
+    container.innerHTML += `<div style="font-size:11px; text-align:center; padding:20px; color:var(--subtext);">No categories yet.</div>`;
     return;
   }
   
-  categories.forEach(cat => {
-    const count = dataset.categories[cat].length;
+  categoryNames.forEach(cat => {
+    const count = modCountForCategory(cat);
     const isActive = cat === activeCategory;
     
     const div = document.createElement('div');
@@ -269,8 +495,10 @@ function renderCategorySidebar() {
 
 function selectActiveCategory(cat) {
   activeCategory = cat;
-  document.getElementById('active-cat-title').textContent = cat ? `⛏  ${cat}` : '← Select a Category';
-  document.getElementById('cat-action-group').style.display = cat ? 'flex' : 'none';
+  document.getElementById('active-cat-title').textContent = cat ? `⛏  ${cat}` : '📦 All Mods';
+  const showCatBtns = cat !== null;
+  document.getElementById('rename-cat-btn').style.display = showCatBtns ? 'flex' : 'none';
+  document.getElementById('delete-cat-btn').style.display = showCatBtns ? 'flex' : 'none';
   renderCategorySidebar();
   renderModCardsList();
 }
@@ -279,30 +507,29 @@ function renderModCardsList() {
   const grid = document.getElementById('mods-grid-injector');
   grid.innerHTML = '';
   
-  if (!activeCategory) {
-    grid.innerHTML = `<div class="empty-state"><div class="empty-state-icon">📂</div>Choose a dashboard category section profile from the sidebar to inspect records.</div>`;
-    return;
-  }
+  let entries = activeCategory === null ? mods.slice() : mods.filter(m => m.categories.includes(activeCategory));
   
-  let mods = dataset.categories[activeCategory] || [];
   const query = document.getElementById('search-bar').value.toLowerCase().trim();
-  
   if (query) {
-    mods = mods.filter(m => m.name.toLowerCase().includes(query) || (m.notes || '').toLowerCase().includes(query));
+    entries = entries.filter(m =>
+      m.name.toLowerCase().includes(query) ||
+      (m.notes || '').toLowerCase().includes(query) ||
+      m.mobs.some(b => b.name.toLowerCase().includes(query))
+    );
   }
   
-  document.getElementById('stats-counter-lbl').textContent = `${mods.length} entries tracked ${query ? `matching query filtering context` : ''}`;
+  document.getElementById('stats-counter-lbl').textContent = `${entries.length} entries tracked ${query ? `matching query filtering context` : ''}`;
   
-  if (mods.length === 0) {
+  if (entries.length === 0) {
     grid.innerHTML = `
       <div class="empty-state">
         <div class="empty-state-icon">🌿</div>
-        No target tracker data metrics match active visibility queries.
+        ${mods.length === 0 ? 'No mods tracked yet. Add one with the button above.' : 'No target tracker data metrics match active visibility queries.'}
       </div>`;
     return;
   }
   
-  mods.forEach(mod => {
+  entries.forEach(mod => {
     const card = document.createElement('div');
     card.className = 'mod-card';
     
@@ -311,23 +538,104 @@ function renderModCardsList() {
       imgHTML = `<img class="mod-img" src="${escapeHtml(mod.image)}" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';"><div class="mod-icon-placeholder" style="display:none;">📦</div>`;
     }
     
+    const badgesHTML = mod.categories.length > 0
+      ? mod.categories.map(c => `<span class="mod-cat-badge">${escapeHtml(c)}</span>`).join('')
+      : `<span class="mod-cat-badge uncategorized">Uncategorized</span>`;
+    
+    const isExpanded = expandedModIds.has(mod.id);
+    
     card.innerHTML = `
-      <div class="mod-img-wrap">${imgHTML}</div>
-      <div class="mod-info">
-        <span class="mod-name">${escapeHtml(mod.name)}</span>
-        ${mod.link ? `<a class="mod-link" href="${escapeHtml(mod.link)}" target="_blank">${escapeHtml(mod.link)}</a>` : ''}
-        ${mod.notes ? `<p class="mod-notes">${escapeHtml(mod.notes)}</p>` : ''}
+      <div class="mod-card-top">
+        <div class="mod-img-wrap">${imgHTML}</div>
+        <div class="mod-info">
+          <div class="mod-cat-badges">${badgesHTML}</div>
+          <span class="mod-name">${escapeHtml(mod.name)}</span>
+          ${mod.link ? `<a class="mod-link" href="${escapeHtml(mod.link)}" target="_blank">${escapeHtml(mod.link)}</a>` : ''}
+          ${mod.notes ? `<p class="mod-notes">${escapeHtml(mod.notes)}</p>` : ''}
+          <button class="mod-mobs-toggle ${isExpanded ? 'expanded' : ''}"><span class="chevron">▸</span> 👹 Bestiary <span class="mob-count-pill">${mod.mobs.length}</span></button>
+        </div>
+        <div class="mod-card-actions">
+          <button class="icon-btn edit" title="Edit Properties">✎</button>
+          <button class="icon-btn del" title="Purge Record">✕</button>
+        </div>
       </div>
-      <div class="mod-card-actions">
-        <button class="icon-btn edit" title="Edit Properties">✎</button>
-        <button class="icon-btn del" title="Purge Record">✕</button>
-      </div>
+      ${isExpanded ? renderMobsSectionHTML(mod) : ''}
     `;
     
-    card.querySelector('.edit').onclick = () => openFormModal(mod);
-    card.querySelector('.del').onclick = () => triggerDeleteModCard(mod);
+    card.querySelector('.mod-mobs-toggle').onclick = () => toggleMobsSection(mod.id);
+    card.querySelector('.mod-card-top .edit').onclick = () => openFormModal(mod);
+    card.querySelector('.mod-card-top .del').onclick = () => triggerDeleteModCard(mod);
+    
+    if (isExpanded) wireMobsSection(card, mod);
+    
     grid.appendChild(card);
   });
+}
+
+function renderMobsSectionHTML(mod) {
+  const rows = mod.mobs.length > 0
+    ? mod.mobs.map(mob => mobTileHTML(mob)).join('')
+    : `<div class="mob-empty-note">No mobs tracked for this mod yet.</div>`;
+  return `
+    <div class="mod-mobs-section">
+      <div class="mod-mobs-header">
+        <span class="mmh-title">👹 Bestiary</span>
+        <button class="tb-btn add-mob-btn">➕ Add Mob</button>
+      </div>
+      <div class="mob-list">${rows}</div>
+    </div>
+  `;
+}
+
+// Recognizable icon + accent color per attribute key, with a sensible fallback
+// for any custom attribute defined in global_attributes.json.
+const ATTR_ICON_MAP = { hp: '❤️', health: '❤️', damage: '⚔️', dmg: '⚔️', defense: '🛡️', armor: '🛡️', speed: '💨', xp: '✨', exp: '✨' };
+const ATTR_COLOR_MAP = { hp: '#ef5350', health: '#ef5350', damage: '#ffa726', dmg: '#ffa726', defense: '#42a5f5', armor: '#42a5f5', speed: '#26c6da', xp: '#ab47bc', exp: '#ab47bc' };
+function attrIcon(key) { return ATTR_ICON_MAP[(key || '').toLowerCase()] || '🔸'; }
+function attrColor(key) { return ATTR_COLOR_MAP[(key || '').toLowerCase()] || '#8d9bb5'; }
+
+function mobTileHTML(mob) {
+  let imgHTML = `<div class="mob-tile-icon-placeholder">👹</div>`;
+  if (mob.image) {
+    imgHTML = `<img class="mob-tile-img" src="${escapeHtml(mob.image)}" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';"><div class="mob-tile-icon-placeholder" style="display:none;">👹</div>`;
+  }
+  const pillsHTML = ATTRIBUTE_SCHEMA.map(a => {
+    const color = attrColor(a.key);
+    const val = mob.attributes[a.key] ?? a.default;
+    return `<span class="mob-attr-pill" style="color:${color}; border-color:${color}40;" title="${escapeHtml(a.label)}">${attrIcon(a.key)} ${escapeHtml(String(val))}</span>`;
+  }).join('');
+  return `
+    <div class="mob-tile" data-mob-id="${escapeHtml(mob.id)}">
+      <div class="mob-tile-actions">
+        <button class="icon-btn edit mob-edit" title="Edit Mob">✎</button>
+        <button class="icon-btn del mob-del" title="Remove Mob">✕</button>
+      </div>
+      <div class="mob-tile-img-wrap">${imgHTML}</div>
+      <div class="mob-tile-body">
+        <div class="mob-tile-name" title="${escapeHtml(mob.name)}">${escapeHtml(mob.name)}</div>
+        <div class="mob-attr-pills">${pillsHTML}</div>
+      </div>
+    </div>
+  `;
+}
+
+function wireMobsSection(cardEl, mod) {
+  const addBtn = cardEl.querySelector('.add-mob-btn');
+  if (addBtn) addBtn.onclick = () => openMobFormModal(mod, null);
+  
+  cardEl.querySelectorAll('.mob-tile').forEach(tile => {
+    const mobId = tile.getAttribute('data-mob-id');
+    const mob = mod.mobs.find(b => b.id === mobId);
+    if (!mob) return;
+    tile.querySelector('.mob-edit').onclick = () => openMobFormModal(mod, mob);
+    tile.querySelector('.mob-del').onclick = () => triggerDeleteMobCard(mod, mob);
+  });
+}
+
+function toggleMobsSection(modId) {
+  if (expandedModIds.has(modId)) expandedModIds.delete(modId);
+  else expandedModIds.add(modId);
+  renderModCardsList();
 }
 
 /* CRUD OPERATIONS LAYER */
@@ -335,8 +643,8 @@ function triggerAddCategory() {
   let name = prompt("Enter new category metric identifier:");
   if (!name || !name.trim()) return;
   name = name.trim();
-  if (dataset.categories[name]) { alert("Category profile collision error!"); return; }
-  dataset.categories[name] = [];
+  if (categoryNames.includes(name)) { alert("Category profile collision error!"); return; }
+  categoryNames.push(name);
   selectActiveCategory(name);
 }
 
@@ -345,26 +653,55 @@ function triggerRenameCategory() {
   let newName = prompt("Modify tracking moniker classification name:", activeCategory);
   if (!newName || !newName.trim() || newName.trim() === activeCategory) return;
   newName = newName.trim();
+  if (categoryNames.includes(newName)) { alert("Category profile collision error!"); return; }
   
-  dataset.categories[newName] = dataset.categories[activeCategory];
-  delete dataset.categories[activeCategory];
+  const idx = categoryNames.indexOf(activeCategory);
+  categoryNames[idx] = newName;
+  mods.forEach(m => {
+    const ci = m.categories.indexOf(activeCategory);
+    if (ci !== -1) m.categories[ci] = newName;
+  });
   selectActiveCategory(newName);
 }
 
 function triggerDeleteCategory() {
-  if (!activeCategory || !confirm(`Purge category "${activeCategory}" along with all tracking children data arrays inside?`)) return;
-  delete dataset.categories[activeCategory];
-  const remaining = Object.keys(dataset.categories);
-  selectActiveCategory(remaining.length > 0 ? remaining[0] : null);
+  if (!activeCategory || !confirm(`Purge category "${activeCategory}"? Mods tagged with it will keep their other categories (or become Uncategorized).`)) return;
+  categoryNames = categoryNames.filter(c => c !== activeCategory);
+  mods.forEach(m => { m.categories = m.categories.filter(c => c !== activeCategory); });
+  selectActiveCategory(null);
 }
 
 function triggerAddModCard() {
+  if (categoryNames.length === 0) {
+    alert("Create a category first, then you can tag mods with it.");
+    return;
+  }
   openFormModal(); // Launches the input panel to create a new mod card record
+}
+
+function populateCategoryCheckboxes(preselected) {
+  const container = document.getElementById('form-mod-categories');
+  if (categoryNames.length === 0) {
+    container.innerHTML = `<div class="cb-empty-note">No categories yet — create one from the sidebar first.</div>`;
+    return;
+  }
+  const selectedSet = new Set(preselected || (activeCategory ? [activeCategory] : []));
+  container.innerHTML = categoryNames.map(cat => `
+    <label class="cb-row">
+      <input type="checkbox" value="${escapeHtml(cat)}" ${selectedSet.has(cat) ? 'checked' : ''}>
+      <span>${escapeHtml(cat)}</span>
+    </label>
+  `).join('');
+}
+
+function getCheckedCategories() {
+  return Array.from(document.querySelectorAll('#form-mod-categories input[type="checkbox"]:checked')).map(cb => cb.value);
 }
 
 function openFormModal(mod = null) {
   editingModReference = mod;
   document.getElementById('modal-header-title').textContent = mod ? "Edit Mod Reference Mapping" : "Track New Mod Element";
+  populateCategoryCheckboxes(mod ? mod.categories : null);
   document.getElementById('form-mod-name').value = mod ? mod.name : "";
   document.getElementById('form-mod-link').value = mod ? mod.link || "" : "";
   document.getElementById('form-mod-image').value = mod ? mod.image || "" : "";
@@ -385,18 +722,25 @@ function saveFormModalData() {
   const name = document.getElementById('form-mod-name').value.trim();
   if (!name) { alert("Mod parameter tracking rules call for a valid Name property."); return; }
   
-  const payload = {
-    name,
-    link: document.getElementById('form-mod-link').value.trim(),
-    image: document.getElementById('form-mod-image').value.trim(),
-    notes: document.getElementById('form-mod-notes').value.trim()
-  };
+  const selectedCategories = getCheckedCategories();
+  if (categoryNames.length > 0 && selectedCategories.length === 0) {
+    alert("Tag this mod with at least one category.");
+    return;
+  }
+  
+  const link = document.getElementById('form-mod-link').value.trim();
+  const image = document.getElementById('form-mod-image').value.trim();
+  const notes = document.getElementById('form-mod-notes').value.trim();
   
   if (editingModReference) {
-    const idx = dataset.categories[activeCategory].indexOf(editingModReference);
-    if(idx !== -1) dataset.categories[activeCategory][idx] = payload;
+    // Mutate in place so the mod's id and any tracked mobs are preserved.
+    editingModReference.name = name;
+    editingModReference.link = link;
+    editingModReference.image = image;
+    editingModReference.notes = notes;
+    editingModReference.categories = selectedCategories;
   } else {
-    dataset.categories[activeCategory].push(payload);
+    mods.push(normalizeMod({ name, link, image, notes, categories: selectedCategories, mobs: [] }));
   }
   
   closeFormModal();
@@ -406,18 +750,168 @@ function saveFormModalData() {
 
 function triggerDeleteModCard(mod) {
   if (!confirm(`Purge reference matrix records for "${mod.name}"?`)) return;
-  dataset.categories[activeCategory] = dataset.categories[activeCategory].filter(m => m !== mod);
+  mods = mods.filter(m => m !== mod);
+  expandedModIds.delete(mod.id);
   renderCategorySidebar();
   renderModCardsList();
 }
 
-function commitChangesToDisk() {
-  sessionStorage.setItem('active_project_payload', JSON.stringify(dataset, null, 2));
-  sessionStorage.setItem('trigger_disk_write_back', 'true');
-  alert("Edits cached successfully! Return to Hub Menu overview interface to register confirmation logs on filesystem streams.");
+/* MOB CRUD OPERATIONS LAYER */
+function openMobFormModal(mod, mob) {
+  editingMobParentMod = mod;
+  editingMobReference = mob;
+  document.getElementById('mob-modal-header-title').textContent = mob ? "Edit Mob" : "Add Mob";
+  document.getElementById('form-mob-name').value = mob ? mob.name : "";
+  document.getElementById('form-mob-image').value = mob ? mob.image || "" : "";
+  renderMobAttributeFields(mob);
+  document.getElementById('mob-modal').style.display = 'flex';
+}
+
+function renderMobAttributeFields(mob) {
+  const container = document.getElementById('form-mob-attrs');
+  container.innerHTML = ATTRIBUTE_SCHEMA.map(attr => `
+    <div class="fg" style="margin-bottom:0;">
+      <label class="fl">${escapeHtml(attr.label)}</label>
+      <input type="number" class="fi" id="mob-attr-${escapeHtml(attr.key)}" value="${mob ? (mob.attributes[attr.key] ?? attr.default) : attr.default}">
+    </div>
+  `).join('');
+}
+
+function closeMobFormModal() {
+  document.getElementById('mob-modal').style.display = 'none';
+  editingMobParentMod = null;
+  editingMobReference = null;
+}
+
+function saveMobFormModalData() {
+  const name = document.getElementById('form-mob-name').value.trim();
+  if (!name) { alert("Mob tracking rules call for a valid Name property."); return; }
+  if (!editingMobParentMod) { closeMobFormModal(); return; }
+  
+  const attributes = {};
+  ATTRIBUTE_SCHEMA.forEach(attr => {
+    const input = document.getElementById(`mob-attr-${attr.key}`);
+    const num = input ? parseFloat(input.value) : NaN;
+    attributes[attr.key] = isNaN(num) ? attr.default : num;
+  });
+  
+  const image = document.getElementById('form-mob-image').value.trim();
+  
+  if (editingMobReference) {
+    editingMobReference.name = name;
+    editingMobReference.image = image;
+    editingMobReference.attributes = attributes;
+  } else {
+    editingMobParentMod.mobs.push({ id: generateId(), name, image, attributes });
+    expandedModIds.add(editingMobParentMod.id); // auto-expand so the new mob is visible
+  }
+  
+  closeMobFormModal();
+  renderCategorySidebar();
+  renderModCardsList();
+}
+
+function triggerDeleteMobCard(mod, mob) {
+  if (!confirm(`Remove mob "${mob.name}" from "${mod.name}"?`)) return;
+  mod.mobs = mod.mobs.filter(b => b.id !== mob.id);
+  renderModCardsList();
+}
+
+/* ===================== DIRECT SYSTEM DISK SAVE ENGINE ===================== */
+async function getWorkspaceDB() {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open("WorkspaceSuiteDB", 1);
+    request.onsuccess = e => resolve(e.target.result);
+    request.onerror = e => reject(e.target.error);
+  });
+}
+
+async function commitChangesToDisk() {
+  const dataset = { categoryNames, mods };
+  const jsonPayload = JSON.stringify(dataset, null, 2);
+
+  // Keep temporary cache synchronized
+  sessionStorage.setItem('active_project_payload', jsonPayload);
+  sessionStorage.setItem('active_project_filename', currentFileName);
+
+  try {
+    const db = await getWorkspaceDB();
+    const tx = db.transaction("settings", "readonly");
+    const rootHandle = await new Promise(res => {
+      tx.objectStore("settings").get("root_folder_handle").onsuccess = e => res(e.target.result);
+    });
+
+    if (rootHandle) {
+      // Access the /loot/ subfolder directly from your registered project directory
+      const lootFolder = await rootHandle.getDirectoryHandle('loot', { create: false });
+      const fileHandle = await lootFolder.getFileHandle(currentFileName, { create: true });
+      
+      const writable = await fileHandle.createWritable();
+      await writable.write(jsonPayload);
+      await writable.close();
+      
+      alert(`💾 Sync Complete! Successfully saved directly to file disk: /loot/${currentFileName}`);
+      return;
+    }
+  } catch(e) {
+    console.error("Direct FileSystem access failed, running backup storage strategy:", e);
+  }
+
+  // Fallback if directory handles are locked/unsupported
+  localStorage.setItem('suite_backup_' + currentFileName, jsonPayload);
+  alert(`Changes saved to temporary memory cache. Return to main dashboard menu to sync.`);
 }
 
 function escapeHtml(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+/* ===================== ATTRIBUTE INTEGRITY CHECKER ===================== */
+function verifyJsonAttributes() {
+  if (!mods || mods.length === 0) {
+    alert("No tracked data metrics available to evaluate.");
+    return;
+  }
+
+  let filledCount = 0;
+  let prunedCount = 0;
+
+  // Extract valid keys dynamically from the parsed schema array
+  const activeKeys = ATTRIBUTE_SCHEMA.map(attr => attr.key);
+
+  mods.forEach(mod => {
+    if (Array.isArray(mod.mobs)) {
+      mod.mobs.forEach(mob => {
+        if (!mob.attributes) {
+          mob.attributes = {};
+        }
+
+        // 1. Inject missing attributes using the defaults from global_attributes.json
+        ATTRIBUTE_SCHEMA.forEach(schemaAttr => {
+          if (mob.attributes[schemaAttr.key] === undefined) {
+            mob.attributes[schemaAttr.key] = schemaAttr.default;
+            filledCount++;
+          }
+        });
+
+        // 2. Remove obsolete properties no longer found in global_attributes.json
+        Object.keys(mob.attributes).forEach(mobKey => {
+          if (!activeKeys.includes(mobKey)) {
+            delete mob.attributes[mobKey];
+            prunedCount++;
+          }
+        });
+      });
+    }
+  });
+
+  // Instantly re-render the mod list UI view to show changes
+  renderModCardsList();
+
+  if (filledCount === 0 && prunedCount === 0) {
+    alert("✨ Alignment Checked: All data structures match your 'global_attributes.json' schema perfectly!");
+  } else {
+    alert(`⚙️ Integrity Alignment Matrix Run Complete!\n\n- Filled Missing Values: ${filledCount}\n- Pruned Deprecated Values: ${prunedCount}\n\nRemember to hit save to commit these updates to disk!`);
+  }
+}
 </script>
 </body>
 </html>

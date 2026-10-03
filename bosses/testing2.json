@@ -1,0 +1,114 @@
+{
+  "nodes": [
+    {
+      "id": "n1",
+      "name": "dsdsd",
+      "difficulty": "medium",
+      "loot": "Pending Drop Rules",
+      "notes": "Auto-imported from: dsdsds",
+      "image": null,
+      "x": 100,
+      "y": 100,
+      "attrs": {
+        "hp": 200,
+        "damage": 20,
+        "defense": 10,
+        "hellooo": 12,
+        "dmg": 20
+      }
+    },
+    {
+      "id": "n2",
+      "name": "ddd",
+      "difficulty": "medium",
+      "loot": "Pending Drop Rules",
+      "notes": "Auto-imported from: dsdsds",
+      "image": null,
+      "x": 320,
+      "y": 100,
+      "attrs": {
+        "hp": 200,
+        "damage": 20,
+        "defense": 10,
+        "hellooo": 12,
+        "dmg": 20
+      }
+    },
+    {
+      "id": "n3",
+      "name": "sss",
+      "difficulty": "medium",
+      "loot": "Pending Drop Rules",
+      "notes": "Auto-imported from: dsdsds",
+      "image": null,
+      "x": 540,
+      "y": 100,
+      "attrs": {
+        "hp": 200,
+        "damage": 20,
+        "defense": 10,
+        "hellooo": 12,
+        "dmg": 20
+      }
+    }
+  ],
+  "edges": [],
+  "difficulties": [
+    {
+      "key": "easy",
+      "label": "Easy",
+      "emoji": "🐢",
+      "color": "#27ae60",
+      "description": "Early game challenge tiers."
+    },
+    {
+      "key": "medium",
+      "label": "Medium",
+      "emoji": "🐺",
+      "color": "#f39c12",
+      "description": "Mid game challenge tiers."
+    },
+    {
+      "key": "hard",
+      "label": "Hard",
+      "emoji": "🔥",
+      "color": "#e74c3c",
+      "description": "Late game baseline scaling."
+    },
+    {
+      "key": "legendary",
+      "label": "Legendary",
+      "emoji": "💀",
+      "color": "#9b59b6",
+      "description": "Pinnacle map hazards."
+    }
+  ],
+  "attrDefs": [
+    {
+      "key": "hp",
+      "label": "HP",
+      "default": 200
+    },
+    {
+      "key": "damage",
+      "label": "Damage",
+      "default": 20
+    },
+    {
+      "key": "defense",
+      "label": "Defense",
+      "default": 12
+    },
+    {
+      "key": "dog",
+      "label": "dog",
+      "default": 0
+    },
+    {
+      "key": "unique",
+      "label": "unique",
+      "default": 0
+    }
+  ],
+  "imageLibrary": {}
+}

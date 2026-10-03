@@ -138,6 +138,29 @@ body {
   cursor: pointer; font-size: 13px; font-weight: 600; transition: all 0.15s;
 }
 .add-btn:hover { background: rgba(245, 166, 35, 0.2); color: #fff; }
+
+/* GLOBAL ATTRIBUTES MODAL STYLING */
+#global-attrs-modal {
+  display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7);
+  align-items: center; justify-content: center; z-index: 2000;
+}
+#global-attrs-modal.open { display: flex; }
+.modal-box {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 14px; padding: 26px 24px; width: 480px; max-width: 95vw;
+  box-shadow: 0 20px 50px rgba(0,0,0,0.6); display: flex; flex-direction: column; gap: 14px;
+}
+.modal-box h3 { font-size: 18px; font-weight: 700; color: #fff; display: flex; justify-content: space-between; align-items: center; }
+.attrs-editor-list { max-height: 250px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; padding-right: 4px; }
+.attr-edit-row { display: flex; gap: 8px; align-items: center; }
+.modal-fi { background: var(--input-bg); border: 1px solid var(--border); color: var(--text); padding: 8px 11px; border-radius: 7px; font-size: 13px; outline: none; }
+.modal-fi:focus { border-color: var(--accent); }
+.attr-del-btn { background: none; border: none; color: #e74c3c; cursor: pointer; font-size: 16px; padding: 4px 8px; }
+.modal-btns { display: flex; gap: 8px; margin-top: 10px; }
+.modal-btns button { flex: 1; padding: 10px; border-radius: 7px; cursor: pointer; font-size: 13px; font-weight: 600; border: 1px solid var(--border); }
+.modal-btns .ok { background: var(--accent); border-color: var(--accent); color: #fff; }
+.modal-btns .ok:hover { background: #c73050; }
+.modal-btns .cancel { background: var(--input-bg); color: var(--muted); }
 </style>
 </head>
 <body>
@@ -149,10 +172,12 @@ body {
     <div id="master-folder-status">
       <button class="proj-btn" style="background:var(--accent); font-size:13px; padding:8px 20px; margin-top:10px;" onclick="selectMasterRootFolder()">📁 Connect Master Mod Folder</button>
     </div>
+    <div id="global-config-bar" style="margin-top: 12px; display: none;">
+      <button class="proj-btn" style="background: var(--accent2); font-size: 12px;" onclick="openGlobalAttributesModal()">⚙️ Manage Shared Boss Attributes</button>
+    </div>
   </div>
   
   <div class="hub-layout">
-    <!-- LEFT SIDE -->
     <div class="hub-left">
       <span class="hub-section-title">Available Suite Applications</span>
       
@@ -166,13 +191,13 @@ body {
       </div>
 
       <div class="app-card" id="mod-loot" onclick="switchActiveSuiteModule('loot', 'mod_tracker.html')">
-  <span class="badge-tag online">Ready</span>
-  <div class="app-card-icon">📦</div>
-  <div class="app-card-info">
-    <h3>Minecraft Mod Tracker</h3>
-    <p>Organize required mods, dependencies parameters, curation lists, and server installation paths.</p>
-  </div>
-</div>
+        <span class="badge-tag online">Ready</span>
+        <div class="app-card-icon">📦</div>
+        <div class="app-card-info">
+          <h3>Minecraft Mod Tracker</h3>
+          <p>Organize required mods, dependencies parameters, curation lists, and server installation paths.</p>
+        </div>
+      </div>
 
       <div class="app-card disabled" id="mod-quests" onclick="alert('Module locked.')">
         <span class="badge-tag locked">Locked</span>
@@ -184,7 +209,6 @@ body {
       </div>
     </div>
     
-    <!-- RIGHT SIDE -->
     <div class="hub-right">
       <span class="hub-section-title">Suite Workspace Explorer</span>
       
@@ -206,13 +230,39 @@ body {
   </div>
 </div>
 
+<div id="global-attrs-modal">
+  <div class="modal-box">
+    <h3>
+      <span>⚙️ Shared Global Attributes</span>
+      <button class="proj-btn" style="background: var(--panel);" onclick="addNewGlobalAttributeField()">＋ Add Attribute</button>
+    </h3>
+    <p style="font-size: 11px; color: var(--muted); margin-bottom: 4px;">Define core parameters here. These fields will be available globally.</p>
+    
+    <div class="attrs-editor-list" id="global-attrs-list-container">
+      </div>
+
+    <div class="modal-btns">
+      <button class="cancel" onclick="closeGlobalAttributesModal()">Cancel</button>
+      <button class="ok" onclick="saveGlobalAttributesToDisk()">💾 Save Changes</button>
+    </div>
+  </div>
+</div>
+
 <script>
 let rootDirHandle = null;
 let activeSubfolderHandle = null;
 let activeSuiteKey = "bosses";          
 let activeAppFilename = "boss_progression.html"; 
 
-// Initialize IndexedDB memory cache on bootup
+// Active schema cache for global attributes
+let globalAttributesData = [
+  { key: 'hp', label: 'HP', default: 200 },
+  { key: 'dmg', label: 'Damage', default: 20 },
+  { key: 'defense', label: 'Defense', default: 10 },
+  { key: 'speed', label: 'Speed', default: 5 },
+  { key: 'xp', label: 'XP', default: 100 }
+];
+
 window.addEventListener('DOMContentLoaded', async () => {
   await tryRestoreFolderToken();
 });
@@ -239,24 +289,28 @@ async function tryRestoreFolderToken() {
     });
 
     if (handle) {
-      // Check if browser still holds permissions from last run
       const options = { mode: 'readwrite' };
       if ((await handle.queryPermission(options)) === 'granted') {
         rootDirHandle = handle;
-        document.getElementById('master-folder-status').innerHTML = `
-          <div class="folder-badge">✔ Restored Folder: ${rootDirHandle.name}</div>
-          <button class="proj-btn" style="background:#1c2438; font-size:11px; margin-left:10px;" onclick="selectMasterRootFolder()">🔄 Change</button>
-        `;
-        document.getElementById('panel-blur-layer').classList.remove('blurred');
+        onFolderConnected();
         await switchActiveSuiteModule(activeSuiteKey, activeAppFilename);
       } else {
-        // Permission expired or requires interaction link click
         document.getElementById('master-folder-status').innerHTML = `
           <button class="proj-btn" style="background:var(--accent2); font-size:13px; padding:8px 20px; margin-top:10px;" onclick="verifyPermissionHook(this)">🔑 Re-Authorize ${handle.name}</button>
         `;
       }
     }
   } catch (e) { console.error("Database restore track skipped.", e); }
+}
+
+function onFolderConnected() {
+  document.getElementById('master-folder-status').innerHTML = `
+    <div class="folder-badge">✔ Connected Folder: ${rootDirHandle.name}</div>
+    <button class="proj-btn" style="background:#1c2438; font-size:11px; margin-left:10px;" onclick="selectMasterRootFolder()">🔄 Change</button>
+  `;
+  document.getElementById('panel-blur-layer').classList.remove('blurred');
+  document.getElementById('global-config-bar').style.display = 'block';
+  loadGlobalAttributesFromDisk();
 }
 
 async function verifyPermissionHook(btn) {
@@ -271,11 +325,7 @@ async function verifyPermissionHook(btn) {
       const status = await handle.requestPermission({ mode: 'readwrite' });
       if (status === 'granted') {
         rootDirHandle = handle;
-        document.getElementById('master-folder-status').innerHTML = `
-          <div class="folder-badge">✔ Restored Folder: ${rootDirHandle.name}</div>
-          <button class="proj-btn" style="background:#1c2438; font-size:11px; margin-left:10px;" onclick="selectMasterRootFolder()">🔄 Change</button>
-        `;
-        document.getElementById('panel-blur-layer').classList.remove('blurred');
+        onFolderConnected();
         await switchActiveSuiteModule(activeSuiteKey, activeAppFilename);
       }
     }
@@ -284,29 +334,102 @@ async function verifyPermissionHook(btn) {
 
 async function selectMasterRootFolder() {
   if (!('showDirectoryPicker' in window)) {
-    alert("Live Server interface required to enable background File System system API vectors.");
+    alert("Your browser doesn't support the File System Access API.");
     return;
   }
   try {
     rootDirHandle = await window.showDirectoryPicker({ mode: 'readwrite' });
     
-    // Write handle reference permanently into database cache!
     const db = await getDB();
     const tx = db.transaction("settings", "readwrite");
     tx.objectStore("settings").put(rootDirHandle, "root_folder_handle");
 
-    document.getElementById('master-folder-status').innerHTML = `
-      <div class="folder-badge">✔ Root Connected: ${rootDirHandle.name}</div>
-      <button class="proj-btn" style="background:#1c2438; font-size:11px; margin-left:10px;" onclick="selectMasterRootFolder()">🔄 Change</button>
-    `;
-    document.getElementById('panel-blur-layer').classList.remove('blurred');
+    onFolderConnected();
     await switchActiveSuiteModule(activeSuiteKey, activeAppFilename);
   } catch (err) {
     console.error(err);
   }
 }
 
-/* ===================== DIRECTORY ROUTER TREE PRESERVED ===================== */
+/* ===================== GLOBAL ATTRIBUTES DISK PERSISTENCE ===================== */
+async function loadGlobalAttributesFromDisk() {
+  if (!rootDirHandle) return;
+  try {
+    const fileHandle = await rootDirHandle.getFileHandle('global_attributes.json', { create: false });
+    const file = await fileHandle.getFile();
+    const content = await file.text();
+    globalAttributesData = JSON.parse(content);
+  } catch(e) {
+    // File doesn't exist yet, write default definitions
+    await saveGlobalAttributesToDisk(true);
+  }
+}
+
+async function saveGlobalAttributesToDisk(isSilent = false) {
+  if (!rootDirHandle) return;
+  
+  if (!isSilent) {
+    // Read compiled updates from dialog DOM inputs
+    const rows = document.querySelectorAll('.attr-edit-row');
+    const updatedAttrs = [];
+    rows.forEach(row => {
+      const labelVal = row.querySelector('.attr-label-input').value.trim();
+      const defaultVal = parseInt(row.querySelector('.attr-default-input').value) || 0;
+      if (labelVal) {
+        const keyVal = labelVal.toLowerCase().replace(/[^a-z0-9_]/g, '_');
+        updatedAttrs.push({ key: keyVal, label: labelVal, default: defaultVal });
+      }
+    });
+    globalAttributesData = updatedAttrs;
+  }
+
+  try {
+    const fileHandle = await rootDirHandle.getFileHandle('global_attributes.json', { create: true });
+    const writable = await fileHandle.createWritable();
+    await writable.write(JSON.stringify(globalAttributesData, null, 2));
+    await writable.close();
+    if (!isSilent) {
+      closeGlobalAttributesModal();
+      alert("💾 Shared global attributes synchronized successfully!");
+    }
+  } catch(e) {
+    alert("Error executing disk operation on attribute payload.");
+  }
+}
+
+/* ===================== MODAL UI ENGINE ===================== */
+function openGlobalAttributesModal() {
+  const container = document.getElementById('global-attrs-list-container');
+  container.innerHTML = '';
+  
+  globalAttributesData.forEach((attr, idx) => {
+    appendAttributeRowUI(attr.label, attr.default);
+  });
+  
+  document.getElementById('global-attrs-modal').classList.add('open');
+}
+
+function closeGlobalAttributesModal() {
+  document.getElementById('global-attrs-modal').classList.remove('open');
+}
+
+function appendAttributeRowUI(label = "", defValue = 0) {
+  const container = document.getElementById('global-attrs-list-container');
+  const div = document.createElement('div');
+  div.className = 'attr-edit-row';
+  div.innerHTML = `
+    <input type="text" class="modal-fi attr-label-input" placeholder="Attribute Name" value="${escapeHtml(label)}" style="flex: 2;">
+    <input type="number" class="modal-fi attr-default-input" placeholder="Default" value="${defValue}" style="width: 100px;">
+    <button class="attr-del-btn" onclick="this.parentElement.remove()">✕</button>
+  `;
+  container.appendChild(div);
+}
+
+function addNewGlobalAttributeField() {
+  appendAttributeRowUI("", 0);
+}
+
+/* ===================== ROUTER LAYER ===================== */
 async function switchActiveSuiteModule(moduleKey, associatedFile) {
   activeSuiteKey = moduleKey;
   activeAppFilename = associatedFile;
@@ -325,10 +448,18 @@ async function switchActiveSuiteModule(moduleKey, associatedFile) {
   if (!rootDirHandle) return;
 
   try {
-    activeSubfolderHandle = await rootDirHandle.getDirectoryHandle(moduleKey, { create: true });
+    let trueCaseTargetName = moduleKey; 
+    for await (const entry of rootDirHandle.values()) {
+      if (entry.kind === 'directory' && entry.name.toLowerCase() === moduleKey.toLowerCase()) {
+        trueCaseTargetName = entry.name;
+        break;
+      }
+    }
+
+    activeSubfolderHandle = await rootDirHandle.getDirectoryHandle(trueCaseTargetName, { create: true });
     document.getElementById('btn-create-file').style.display = 'block';
     await scanActiveSubFolder();
-  } catch (err) { console.error(err); }
+  } catch (err) { console.error("Directory router fault:", err); }
 }
 
 async function scanActiveSubFolder() {
@@ -338,33 +469,37 @@ async function scanActiveSubFolder() {
   container.innerHTML = '';
   let counter = 0;
 
-  for await (const entry of activeSubfolderHandle.values()) {
-    if (entry.kind === 'file' && entry.name.endsWith('.json')) {
-      counter++;
-      const file = await entry.getFile();
-      
-      const card = document.createElement('div');
-      card.className = 'project-item';
-      card.innerHTML = `
-        <div class="project-meta">
-          <span class="project-name">📄 ${escapeHtml(entry.name)}</span>
-          <span class="project-date">Size: ${(file.size / 1024).toFixed(2)} KB · Config JSON</span>
-        </div>
-        <button class="proj-btn">⚡ Open in Editor</button>
-      `;
+  try {
+    for await (const entry of activeSubfolderHandle.values()) {
+      if (entry.kind === 'file' && entry.name.toLowerCase().endsWith('.json')) {
+        counter++;
+        const file = await entry.getFile();
+        
+        const card = document.createElement('div');
+        card.className = 'project-item';
+        card.innerHTML = `
+          <div class="project-meta">
+            <span class="project-name">📄 ${escapeHtml(entry.name)}</span>
+            <span class="project-date">Size: ${(file.size / 1024).toFixed(2)} KB · Config JSON</span>
+          </div>
+          <button class="proj-btn">⚡ Open in Editor</button>
+        `;
 
-      card.querySelector('.proj-btn').addEventListener('click', async () => {
-  const textPayload = await file.text();
-  // Temporarily store the active project state in SessionStorage
-  sessionStorage.setItem('active_project_filename', entry.name);
-  sessionStorage.setItem('active_project_payload', textPayload);
-  
-  // Dynamically redirects to activeAppFilename (which becomes 'mod_tracker.html')
-  window.location.href = activeAppFilename;
-});
+        card.querySelector('.proj-btn').addEventListener('click', async () => {
+          const textPayload = await file.text();
+          
+          // Inject shared global attributes configuration file into browser state cache prior to redirecting
+          sessionStorage.setItem('shared_global_attributes', JSON.stringify(globalAttributesData));
+          sessionStorage.setItem('active_project_filename', entry.name);
+          sessionStorage.setItem('active_project_payload', textPayload);
+          window.location.href = activeAppFilename;
+        });
 
-      container.appendChild(card);
+        container.appendChild(card);
+      }
     }
+  } catch(e) {
+    console.error("Failed to read directory entries:", e);
   }
 
   if (counter === 0) {
@@ -376,10 +511,14 @@ async function createNewFileInActiveSubfolder() {
   if (!activeSubfolderHandle) return;
   let name = prompt(`Enter custom profile name to create inside /${activeSuiteKey}/:`);
   if (!name || !name.trim()) return;
-  let filename = name.trim().endsWith('.json') ? name.trim() : name.trim() + '.json';
+  let filename = name.trim().toLowerCase().endsWith('.json') ? name.trim() : name.trim() + '.json';
   try {
     const fileHandle = await activeSubfolderHandle.getFileHandle(filename, { create: true });
-    const templateBlueprint = { nodes: [], edges: [] };
+    
+    const templateBlueprint = activeSuiteKey === 'loot'
+      ? { mods: [], dependencies: [], serverPath: "" }
+      : { nodes: [], edges: [] };
+
     const writable = await fileHandle.createWritable();
     await writable.write(JSON.stringify(templateBlueprint, null, 2));
     await writable.close();

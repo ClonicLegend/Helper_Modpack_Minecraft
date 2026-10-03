@@ -1,0 +1,43 @@
+{
+  "categoryNames": [
+    "mods",
+    "dependencies",
+    "serverPath"
+  ],
+  "mods": [
+    {
+      "id": "id_mqvexhyqv6lk5l",
+      "name": "dsdsds",
+      "link": "",
+      "image": "",
+      "notes": "",
+      "categories": [
+        "mods"
+      ],
+      "mobs": [
+        {
+          "id": "id_mqvf8ocinhet79",
+          "name": "ddd",
+          "image": "",
+          "attributes": {
+            "hp": 200,
+            "damage": 20,
+            "defense": 10,
+            "hellooo": 12
+          }
+        },
+        {
+          "id": "id_mqvfnvpphhbx4q",
+          "name": "sss",
+          "image": "",
+          "attributes": {
+            "hp": 200,
+            "damage": 20,
+            "defense": 10,
+            "hellooo": 12
+          }
+        }
+      ]
+    }
+  ]
+}
